@@ -146,7 +146,7 @@ func main() {
 
 		kdaString := fmt.Sprintf("%d/%d/%d", matchParticipant.Kills, matchParticipant.Deaths, matchParticipant.Assists)
 
-		kda := lipgloss.NewStyle().Background(backgroundColor).Width(lipgloss.Width(renderedKdaBottomSection))
+		kda := lipgloss.NewStyle().Background(backgroundColor).Bold(true).Width(lipgloss.Width(renderedKdaBottomSection))
 
 		renderedKda := kda.Render(kdaString)
 
@@ -165,7 +165,7 @@ func main() {
 
 		renderedCsPerMinute := csPerMinute.Render(csPerMinuteString)
 
-		cs := lipgloss.NewStyle().Background(backgroundColor).Width(lipgloss.Width(renderedCsPerMinute))
+		cs := lipgloss.NewStyle().Background(backgroundColor).Bold(true).Width(lipgloss.Width(renderedCsPerMinute))
 
 		renderedCs := cs.Render(csString)
 
