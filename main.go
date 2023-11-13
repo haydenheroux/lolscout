@@ -136,6 +136,10 @@ func main() {
 
 		killParticipation := lipgloss.NewStyle().Background(backgroundColor).PaddingRight(1)
 
+		if matchParticipant.KillParticipation >= 0.5 {
+			killParticipation = killParticipation.Foreground(lipgloss.Color("#E84057"))
+		}
+
 		renderedKillParticipation := killParticipation.Render(killParticipationString)
 
 		renderedKdaBottomSection := lipgloss.JoinHorizontal(lipgloss.Bottom, renderedKdaText, renderedKillParticipation)
@@ -151,9 +155,13 @@ func main() {
 
 		csString := fmt.Sprintf("%d CS", matchParticipant.CS)
 
-		csPerMinuteString := fmt.Sprintf("(%.1f CS/M)", matchParticipant.CSPerMinute)
+		csPerMinuteString := fmt.Sprintf("%.1f CS/M", matchParticipant.CSPerMinute)
 
 		csPerMinute := lipgloss.NewStyle().Background(backgroundColor)
+
+		if matchParticipant.CSPerMinute >= 8.0 {
+			csPerMinute = csPerMinute.Foreground(lipgloss.Color("#E84057"))
+		}
 
 		renderedCsPerMinute := csPerMinute.Render(csPerMinuteString)
 
