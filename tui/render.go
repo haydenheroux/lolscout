@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"lolscout/stats"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -54,11 +55,11 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 
 	kdaTextStyle := whiteKda
 
-	if kdaValue >= 5 {
+	if kdaValue >= stats.GOLD_KDA {
 		kdaTextStyle = goldKda
-	} else if kdaValue >= 4 {
+	} else if kdaValue >= stats.BLUE_KDA {
 		kdaTextStyle = blueKda
-	} else if kdaValue >= 3 {
+	} else if kdaValue >= stats.GREEN_KDA {
 		kdaTextStyle = greenKda
 	}
 
@@ -72,7 +73,7 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 
 	killParticipation := lipgloss.NewStyle().Background(backgroundColor).PaddingRight(1)
 
-	if matchParticipant.KillParticipation >= 0.5 {
+	if matchParticipant.KillParticipation >= stats.KILL_PARTICIPATION {
 		killParticipation = killParticipation.Foreground(redColor)
 	}
 
@@ -95,7 +96,7 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 
 	csPerMinute := lipgloss.NewStyle().Background(backgroundColor)
 
-	if matchParticipant.CSPerMinute >= 8.0 {
+	if matchParticipant.CSPerMinute >= stats.CS_PER_MINUTE {
 		csPerMinute = csPerMinute.Foreground(redColor)
 	}
 
