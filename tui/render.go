@@ -30,16 +30,16 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 		borderColor = redBorderColor
 	}
 
-	// TODO
-	championSectionWidth := 14
+	levelString := fmt.Sprintf("Lvl. %d", matchParticipant.Level)
 
-	championName := lipgloss.NewStyle().Background(backgroundColor).Bold(true).Width(championSectionWidth)
+	// TODO Use PaddingRight(1)
+	maxWidth := max(len(levelString), len(matchParticipant.ChampionName)) + 1
+
+	championName := lipgloss.NewStyle().Background(backgroundColor).Bold(true).Width(maxWidth)
 
 	renderedChampionName := championName.Render(matchParticipant.ChampionName)
 
-	levelString := fmt.Sprintf("Lvl. %d", matchParticipant.Level)
-
-	level := lipgloss.NewStyle().Background(backgroundColor).PaddingRight(1).Width(championSectionWidth)
+	level := lipgloss.NewStyle().Background(backgroundColor).Width(maxWidth)
 
 	renderedLevel := level.Render(levelString)
 
@@ -110,7 +110,7 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 
 	renderedBody := lipgloss.JoinHorizontal(lipgloss.Top, renderedChampionSection, renderedKdaSection, renderedCsSection)
 
-	container := lipgloss.NewStyle().Background(backgroundColor).Border(lipgloss.BlockBorder(), false, false, false, true).BorderForeground(borderColor).Padding(2).MarginBottom(1).Width(80)
+	container := lipgloss.NewStyle().Background(backgroundColor).Border(lipgloss.BlockBorder(), false, false, false, true).BorderForeground(borderColor).Padding(2).MarginBottom(1).Width(60)
 
 	return container.Render(lipgloss.NewStyle().Background(backgroundColor).Render(renderedBody))
 }
