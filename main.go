@@ -5,7 +5,6 @@ import (
 
 	"github.com/KnutZuidema/golio"
 	"github.com/KnutZuidema/golio/api"
-	"github.com/KnutZuidema/golio/riot/lol"
 	env "github.com/Netflix/go-env"
 	"github.com/charmbracelet/lipgloss"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +47,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var summonerParticipants []lol.Participant
+	var summonerMatchParticipants []MatchParticipant
 
 	for _, matchId := range matchIds {
 		match, err := client.Riot.LoL.Match.Get(matchId)
@@ -56,29 +55,31 @@ func main() {
 			log.Fatal(err)
 		}
 
+		teamKills := make(map[int]int)
+
+		for _, participant := range match.Info.Participants {
+			teamKills[participant.TeamID] += participant.Kills
+		}
+
+		durationMinutes := match.Info.GameDuration / 60
+
 		for _, participant := range match.Info.Participants {
 			if participant.PUUID == summoner.PUUID {
-				summonerParticipants = append(summonerParticipants, *participant)
+				var matchParticipant MatchParticipant
+
+				matchParticipant.ChampionName = participant.ChampionName
+				matchParticipant.Level = participant.ChampLevel
+				matchParticipant.Kills = participant.Kills
+				matchParticipant.Deaths = participant.Deaths
+				matchParticipant.Assists = participant.Assists
+				matchParticipant.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
+				matchParticipant.CS = participant.TotalMinionsKilled
+				matchParticipant.CSPerMinute = float64(participant.TotalMinionsKilled) / float64(durationMinutes)
+				matchParticipant.Win = participant.Win
+
+				summonerMatchParticipants = append(summonerMatchParticipants, matchParticipant)
 			}
 		}
-	}
-
-	var summonerMatchParticipants []MatchParticipant
-
-	for _, participant := range summonerParticipants {
-		var matchParticipant MatchParticipant
-
-		matchParticipant.ChampionName = participant.ChampionName
-		matchParticipant.Level = participant.ChampLevel
-		matchParticipant.Kills = participant.Kills
-		matchParticipant.Deaths = participant.Deaths
-		matchParticipant.Assists = participant.Assists
-		matchParticipant.KillParticipation = 0.0 // TODO
-		matchParticipant.CS = participant.TotalMinionsKilled
-		matchParticipant.CSPerMinute = 0.0 // TODO
-		matchParticipant.Win = participant.Win
-
-		summonerMatchParticipants = append(summonerMatchParticipants, matchParticipant)
 	}
 
 	for _, matchParticipant := range summonerMatchParticipants {
@@ -131,7 +132,7 @@ func main() {
 
 		renderedKdaText := kdaTextStyle.Render(kdaText)
 
-		killParticipationString := fmt.Sprintf("(%.0f%% KP)", matchParticipant.KillParticipation)
+		killParticipationString := fmt.Sprintf("(%.0f%% KP)", matchParticipant.KillParticipation*100)
 
 		killParticipation := lipgloss.NewStyle().Background(backgroundColor).PaddingRight(1)
 
