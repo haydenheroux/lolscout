@@ -64,6 +64,8 @@ func main() {
 				matchParticipant.CS = participant.TotalMinionsKilled
 				matchParticipant.CSPerMinute = float64(participant.TotalMinionsKilled) / float64(durationMinutes)
 				matchParticipant.Win = participant.Win
+				matchParticipant.MatchType = lookupQueue(match.Info.QueueID)
+				matchParticipant.DurationMinutes = durationMinutes
 
 				summonerMatchParticipants = append(summonerMatchParticipants, matchParticipant)
 			}
@@ -73,4 +75,12 @@ func main() {
 	for _, matchParticipant := range summonerMatchParticipants {
 		fmt.Println(tui.RenderMatchParticipant(matchParticipant))
 	}
+}
+
+func lookupQueue(queueId int) string {
+	switch queueId {
+	case 400:
+		return "Normal"
+	}
+	return "TODO: Unimplemented"
 }

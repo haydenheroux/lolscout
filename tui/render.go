@@ -17,6 +17,8 @@ type MatchParticipant struct {
 	CS                int
 	CSPerMinute       float64
 	Win               bool
+	MatchType         string
+	DurationMinutes   int
 }
 
 func RenderMatchParticipant(matchParticipant MatchParticipant) string {
@@ -30,9 +32,22 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 		borderColor = redBorderColor
 	}
 
+	durationString := fmt.Sprintf("%dm", matchParticipant.DurationMinutes)
+
+	// TODO Add one unit of right padding
+	maxWidthMatchTypeDuration := max(len(matchParticipant.MatchType), len(durationString)) + 1
+
+	matchType := lipgloss.NewStyle().Background(backgroundColor).Bold(true).Width(maxWidthMatchTypeDuration)
+	renderedMatchType := matchType.Render(matchParticipant.MatchType)
+
+	duration := lipgloss.NewStyle().Background(backgroundColor).Width(maxWidthMatchTypeDuration)
+	renderedDuration := duration.Render(durationString)
+
+	renderedMatchInfoSection := lipgloss.JoinVertical(lipgloss.Left, renderedMatchType, renderedDuration)
+
 	levelString := fmt.Sprintf("Lvl. %d", matchParticipant.Level)
 
-	// TODO Use PaddingRight(1)
+	// TODO Add one unit of right padding
 	maxWidth := max(len(levelString), len(matchParticipant.ChampionName)) + 1
 
 	championName := lipgloss.NewStyle().Background(backgroundColor).Bold(true).Width(maxWidth)
@@ -108,7 +123,7 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 
 	renderedCsSection := lipgloss.JoinVertical(lipgloss.Left, renderedCs, renderedCsPerMinute)
 
-	renderedBody := lipgloss.JoinHorizontal(lipgloss.Top, renderedChampionSection, renderedKdaSection, renderedCsSection)
+	renderedBody := lipgloss.JoinHorizontal(lipgloss.Top, renderedMatchInfoSection, renderedChampionSection, renderedKdaSection, renderedCsSection)
 
 	container := lipgloss.NewStyle().Background(backgroundColor).Border(lipgloss.BlockBorder(), false, false, false, true).BorderForeground(borderColor).Padding(2).MarginBottom(1).Width(60)
 
