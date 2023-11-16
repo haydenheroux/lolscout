@@ -60,7 +60,13 @@ func RenderMatchParticipant(matchParticipant MatchParticipant) string {
 
 	renderedChampionSection := lipgloss.JoinVertical(lipgloss.Left, renderedChampionName, renderedLevel)
 
-	kdaValue := float64(matchParticipant.Kills+matchParticipant.Assists) / float64(matchParticipant.Deaths)
+	var kdaValue float64
+
+	if matchParticipant.Deaths > 0 {
+		kdaValue = float64(matchParticipant.Kills+matchParticipant.Assists) / float64(matchParticipant.Deaths)
+	} else {
+		kdaValue = float64(matchParticipant.Kills + matchParticipant.Assists)
+	}
 
 	whiteKda := lipgloss.NewStyle().Background(backgroundColor)
 
