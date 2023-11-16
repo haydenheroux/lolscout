@@ -35,7 +35,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var summonerMatchParticipants []tui.MatchParticipant
+	var summonerMatchParticipants []tui.MatchParticipantModel
 
 	for _, matchId := range matchIds {
 		match, err := client.Riot.LoL.Match.Get(matchId)
@@ -53,7 +53,7 @@ func main() {
 
 		for _, participant := range match.Info.Participants {
 			if participant.PUUID == summoner.PUUID {
-				var matchParticipant tui.MatchParticipant
+				var matchParticipant tui.MatchParticipantModel
 
 				matchParticipant.ChampionName = participant.ChampionName
 				matchParticipant.Level = participant.ChampLevel
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	for _, matchParticipant := range summonerMatchParticipants {
-		fmt.Println(tui.RenderMatchParticipant(matchParticipant))
+		fmt.Println(matchParticipant.View())
 	}
 }
 
