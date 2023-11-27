@@ -3,23 +3,12 @@ package tui
 import (
 	"fmt"
 	"lolscout/stats"
+	"lolscout/structs"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
-type MatchParticipant struct {
-	ChampionName      string
-	Level             int
-	Kills             int
-	Deaths            int
-	Assists           int
-	KillParticipation float64
-	CS                int
-	CSPerMinute       float64
-	Win               bool
-}
-
-func RenderMatchParticipant(matchParticipant MatchParticipant) string {
+func RenderMatchParticipant(matchParticipant structs.MatchParticipant) string {
 	var backgroundColor, borderColor lipgloss.Color
 
 	if matchParticipant.Win {
