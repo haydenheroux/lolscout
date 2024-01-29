@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
 	leagueApi "lolscout/api"
-	"lolscout/tui"
 
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
@@ -22,13 +20,5 @@ func main() {
 
 	client := leagueApi.New(environment.RiotApiKey)
 
-	summonerMatchParticipants, err := client.GetPlayer("dwx")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, matchParticipant := range summonerMatchParticipants {
-		fmt.Println(tui.RenderMatchParticipant(matchParticipant))
-	}
+	client.DoCS()
 }
