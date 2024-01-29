@@ -82,5 +82,5 @@ func lookupQueue(queueId int) string {
 	case 400:
 		return "Normal"
 	}
-	return "TODO: Unimplemented"
+	return fmt.Sprintf("TODO: %d", queueId)
 }
