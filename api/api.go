@@ -2,11 +2,11 @@ package api
 
 import (
 	"fmt"
-	"lolscout/stats"
 	"time"
 
-	"github.com/KnutZuidema/golio"
+	"lolscout/data"
 
+	"github.com/KnutZuidema/golio"
 	"github.com/KnutZuidema/golio/api"
 	"github.com/KnutZuidema/golio/riot/lol"
 	log "github.com/sirupsen/logrus"
@@ -24,23 +24,23 @@ func New(key string) LeagueAPI {
 	}
 }
 
-func (api LeagueAPI) GetPlayer(name string) ([]stats.MatchParticipantStats, error) {
+func (api LeagueAPI) GetPlayer(name string) ([]data.MatchParticipantStats, error) {
 	summoner, err := api.client.Riot.LoL.Summoner.GetByName(name)
 	if err != nil {
-		return []stats.MatchParticipantStats{}, err
+		return []data.MatchParticipantStats{}, err
 	}
 
 	matchIds, err := api.client.Riot.LoL.Match.List(summoner.PUUID, 0, 20)
 	if err != nil {
-		return []stats.MatchParticipantStats{}, err
+		return []data.MatchParticipantStats{}, err
 	}
 
-	var summonerMatchParticipants []stats.MatchParticipantStats
+	var summonerMatchParticipants []data.MatchParticipantStats
 
 	for _, matchId := range matchIds {
 		match, err := api.client.Riot.LoL.Match.Get(matchId)
 		if err != nil {
-			return []stats.MatchParticipantStats{}, err
+			return []data.MatchParticipantStats{}, err
 		}
 
 		summonerMatchParticipants = append(summonerMatchParticipants, transformMatch(match, summoner))
@@ -113,8 +113,8 @@ func (api LeagueAPI) DoCS() {
 	fmt.Printf("dwx total: %d marbee total: %d\n", dwxCount, marbeeCount)
 }
 
-func summonerStatsToString(stats stats.MatchParticipantStats) string {
-	return fmt.Sprintf("(%s) cs: %d, cs/m: %.2f, kp: %.2f, won?: %v", stats.ChampionName, stats.CS, stats.CSPerMinute, stats.KillParticipation*100, stats.Win)
+func summonerStatsToString(data data.MatchParticipantStats) string {
+	return fmt.Sprintf("(%s) cs: %d, cs/m: %.2f, kp: %.2f, won?: %v", data.ChampionName, data.CS, data.CSPerMinute, data.KillParticipation*100, data.Win)
 }
 
 func (api LeagueAPI) getMonthMatches(summoner *lol.Summoner) ([]lol.Match, error) {
@@ -203,7 +203,7 @@ func (api LeagueAPI) getPUUIDS(names []string) ([]string, error) {
 	return puuids, nil
 }
 
-func transformMatch(match *lol.Match, summoner *lol.Summoner) stats.MatchParticipantStats {
+func transformMatch(match *lol.Match, summoner *lol.Summoner) data.MatchParticipantStats {
 	teamKills := make(map[int]int)
 
 	for _, participant := range match.Info.Participants {
@@ -214,7 +214,7 @@ func transformMatch(match *lol.Match, summoner *lol.Summoner) stats.MatchPartici
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
-			var matchParticipant stats.MatchParticipantStats
+			var matchParticipant data.MatchParticipantStats
 
 			matchParticipant.ChampionName = participant.ChampionName
 			matchParticipant.Level = participant.ChampLevel
@@ -233,7 +233,7 @@ func transformMatch(match *lol.Match, summoner *lol.Summoner) stats.MatchPartici
 	}
 
 	// TODO
-	return stats.MatchParticipantStats{}
+	return data.MatchParticipantStats{}
 }
 
 func lookupQueue(queueId int) string {

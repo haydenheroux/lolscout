@@ -1,4 +1,4 @@
-package stats
+package data
 
 const (
 	CS_PER_MINUTE      = 8.0

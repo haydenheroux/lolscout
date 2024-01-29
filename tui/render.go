@@ -2,13 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"lolscout/stats"
+	"lolscout/data"
 
 	"github.com/charmbracelet/lipgloss"
 )
 
 type MatchParticipantModel struct {
-	stats.MatchParticipantStats
+	data.MatchParticipantStats
 }
 
 type theme struct {
@@ -84,11 +84,11 @@ func (mp MatchParticipantModel) kdaView() string {
 
 	kdaTextStyle := whiteKda
 
-	if kdRatio >= stats.GOLD_KDA {
+	if kdRatio >= data.GOLD_KDA {
 		kdaTextStyle = goldKda
-	} else if kdRatio >= stats.BLUE_KDA {
+	} else if kdRatio >= data.BLUE_KDA {
 		kdaTextStyle = blueKda
-	} else if kdRatio >= stats.GREEN_KDA {
+	} else if kdRatio >= data.GREEN_KDA {
 		kdaTextStyle = greenKda
 	}
 
@@ -102,7 +102,7 @@ func (mp MatchParticipantModel) kdaView() string {
 
 	killParticipation := lipgloss.NewStyle().Background(background)
 
-	if mp.KillParticipation >= stats.KILL_PARTICIPATION {
+	if mp.KillParticipation >= data.KILL_PARTICIPATION {
 		killParticipation = killParticipation.Foreground(redColor)
 	}
 
@@ -131,7 +131,7 @@ func (mp MatchParticipantModel) creepScoreView() string {
 
 	csPerMinute := lipgloss.NewStyle().Background(background)
 
-	if mp.CSPerMinute >= stats.CS_PER_MINUTE {
+	if mp.CSPerMinute >= data.CS_PER_MINUTE {
 		csPerMinute = csPerMinute.Foreground(redColor)
 	}
 

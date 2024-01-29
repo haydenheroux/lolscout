@@ -1,4 +1,4 @@
-package stats
+package data
 
 type MatchParticipantStats struct {
 	ChampionName      string
