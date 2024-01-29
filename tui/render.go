@@ -3,7 +3,6 @@ package tui
 import (
 	"fmt"
 	"lolscout/stats"
-	"lolscout/structs"
 
 	"github.com/charmbracelet/lipgloss"
 )

@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"lolscout/structs"
+	"lolscout/stats"
 	"time"
 
 	"github.com/KnutZuidema/golio"
@@ -24,23 +24,23 @@ func New(key string) LeagueAPI {
 	}
 }
 
-func (api LeagueAPI) GetPlayer(name string) ([]structs.MatchParticipant, error) {
+func (api LeagueAPI) GetPlayer(name string) ([]stats.MatchParticipantStats, error) {
 	summoner, err := api.client.Riot.LoL.Summoner.GetByName(name)
 	if err != nil {
-		return []structs.MatchParticipant{}, err
+		return []stats.MatchParticipantStats{}, err
 	}
 
 	matchIds, err := api.client.Riot.LoL.Match.List(summoner.PUUID, 0, 20)
 	if err != nil {
-		return []structs.MatchParticipant{}, err
+		return []stats.MatchParticipantStats{}, err
 	}
 
-	var summonerMatchParticipants []structs.MatchParticipant
+	var summonerMatchParticipants []stats.MatchParticipantStats
 
 	for _, matchId := range matchIds {
 		match, err := api.client.Riot.LoL.Match.Get(matchId)
 		if err != nil {
-			return []structs.MatchParticipant{}, err
+			return []stats.MatchParticipantStats{}, err
 		}
 
 		summonerMatchParticipants = append(summonerMatchParticipants, transformMatch(match, summoner))
@@ -113,7 +113,7 @@ func (api LeagueAPI) DoCS() {
 	fmt.Printf("dwx total: %d marbee total: %d\n", dwxCount, marbeeCount)
 }
 
-func summonerStatsToString(stats structs.MatchParticipant) string {
+func summonerStatsToString(stats stats.MatchParticipantStats) string {
 	return fmt.Sprintf("(%s) cs: %d, cs/m: %.2f, kp: %.2f, won?: %v", stats.ChampionName, stats.CS, stats.CSPerMinute, stats.KillParticipation*100, stats.Win)
 }
 
@@ -203,9 +203,7 @@ func (api LeagueAPI) getPUUIDS(names []string) ([]string, error) {
 	return puuids, nil
 }
 
-func transformMatch(match *lol.Match, summoner *lol.Summoner) structs.MatchParticipant {
-	var matchParticipant structs.MatchParticipant
-
+func transformMatch(match *lol.Match, summoner *lol.Summoner) stats.MatchParticipantStats {
 	teamKills := make(map[int]int)
 
 	for _, participant := range match.Info.Participants {
@@ -216,6 +214,8 @@ func transformMatch(match *lol.Match, summoner *lol.Summoner) structs.MatchParti
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
+			var matchParticipant stats.MatchParticipantStats
+
 			matchParticipant.ChampionName = participant.ChampionName
 			matchParticipant.Level = participant.ChampLevel
 			matchParticipant.Kills = participant.Kills
@@ -225,9 +225,21 @@ func transformMatch(match *lol.Match, summoner *lol.Summoner) structs.MatchParti
 			matchParticipant.CS = participant.TotalMinionsKilled
 			matchParticipant.CSPerMinute = float64(participant.TotalMinionsKilled) / float64(durationMinutes)
 			matchParticipant.Win = participant.Win
-			break
+			matchParticipant.MatchType = lookupQueue(match.Info.QueueID)
+			matchParticipant.DurationMinutes = durationMinutes
+
+			return matchParticipant
 		}
 	}
 
-	return matchParticipant
+	// TODO
+	return stats.MatchParticipantStats{}
+}
+
+func lookupQueue(queueId int) string {
+	switch queueId {
+	case 400:
+		return "Normal"
+	}
+	return fmt.Sprintf("TODO: %d", queueId)
 }
