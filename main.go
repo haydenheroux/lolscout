@@ -1,13 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"lolscout/stats"
-	"lolscout/tui"
-
-	"github.com/KnutZuidema/golio"
-	"github.com/KnutZuidema/golio/api"
-	"github.com/KnutZuidema/golio/riot/lol"
+	leagueApi "lolscout/api"
+  
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
 )
@@ -23,38 +18,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	client := golio.NewClient(environment.RiotApiKey,
-		golio.WithRegion(api.RegionNorthAmerica),
-		golio.WithLogger(log.New()))
-
-	summoner, err := client.Riot.LoL.Summoner.GetByName("dwx")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	matchIds, err := client.Riot.LoL.Match.List(summoner.PUUID, 0, 20)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var summonerMatchParticipants []stats.MatchParticipantStats
-
-	for _, matchId := range matchIds {
-		match, err := client.Riot.LoL.Match.Get(matchId)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		summonerMatchParticipants = append(summonerMatchParticipants, matchToStats(match, summoner))
-	}
-
-	for _, matchParticipant := range summonerMatchParticipants {
-		model := tui.MatchParticipantModel{
-			MatchParticipantStats: matchParticipant,
-		}
-
-		fmt.Println(model.View())
-	}
+	client := leagueApi.New(environment.RiotApiKey)
+  
+	client.DoCS()
 }
 
 func matchToStats(match *lol.Match, summoner *lol.Summoner) stats.MatchParticipantStats {
