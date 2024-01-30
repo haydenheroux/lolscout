@@ -42,7 +42,7 @@ func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {
 			matchParticipant.CS = participant.TotalMinionsKilled
 			matchParticipant.CSPerMinute = float64(participant.TotalMinionsKilled) / float64(durationMinutes)
 			matchParticipant.Win = participant.Win
-			matchParticipant.MatchType = lookupQueue(match.Info.QueueID)
+			matchParticipant.MatchType = lookupQueue(Queue(match.Info.QueueID))
 			matchParticipant.DurationMinutes = durationMinutes
 
 			return matchParticipant
@@ -53,10 +53,22 @@ func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {
 	return MatchParticipantStats{}
 }
 
-func lookupQueue(queueId int) string {
-	switch queueId {
-	case 400:
+type Queue int
+
+const (
+	Normal Queue = 400
+	Ranked Queue = 420
+	Clash  Queue = 700
+)
+
+func lookupQueue(queue Queue) string {
+	switch queue {
+	case Normal:
 		return "Normal"
+	case Ranked:
+		return "Ranked"
+	case Clash:
+		return "Clash"
 	}
-	return fmt.Sprintf("TODO: %d", queueId)
+	return fmt.Sprintf("TODO: %d", queue)
 }

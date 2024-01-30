@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"lolscout/api"
 	"lolscout/data"
+	"lolscout/tui"
 	"time"
 
 	"github.com/KnutZuidema/golio/riot/lol"
@@ -34,7 +35,7 @@ func main() {
 		return
 	}
 
-	queues := []int{400, 420, 700}
+	queues := []data.Queue{data.Normal, data.Ranked, data.Clash}
 
 	matches, err := client.Get(dwx, queues).From(time.Now().AddDate(0, -1, 0))
 
@@ -57,17 +58,10 @@ func main() {
 			marbeeCount += 1
 		}
 
-		dwxString := "dwx " + summonerStatsToString(dwxStats)
-		marbeeString := "marbee " + summonerStatsToString(marbeeStats)
-
-		println(dwxString)
-		println(marbeeString)
+		println(tui.MatchParticipantModel{MatchParticipantStats: dwxStats}.View())
+		println(tui.MatchParticipantModel{MatchParticipantStats: marbeeStats}.View())
 		println()
 	}
 
 	fmt.Printf("dwx total: %d marbee total: %d\n", dwxCount, marbeeCount)
-}
-
-func summonerStatsToString(data data.MatchParticipantStats) string {
-	return fmt.Sprintf("(%s) cs: %d, cs/m: %.2f, kp: %.2f, won?: %v", data.ChampionName, data.CS, data.CSPerMinute, data.KillParticipation*100, data.Win)
 }

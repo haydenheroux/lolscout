@@ -1,6 +1,7 @@
 package api
 
 import (
+	"lolscout/data"
 	"time"
 
 	"github.com/KnutZuidema/golio"
@@ -24,11 +25,10 @@ func New(key string) API {
 type getter struct {
 	api      API
 	summoner *lol.Summoner
-	// TODO Make array of enum
-	queues []int
+	queues   []data.Queue
 }
 
-func (api API) Get(summoner *lol.Summoner, queues []int) getter {
+func (api API) Get(summoner *lol.Summoner, queues []data.Queue) getter {
 	return getter{
 		api,
 		summoner,
@@ -101,7 +101,9 @@ func (g getter) Between(startTime time.Time, endTime time.Time) ([]*lol.Match, e
 	}
 
 	for _, queue := range g.queues {
-		options.Queue = &queue
+		// TODO Hack
+		queue_ := int(queue)
+		options.Queue = &queue_
 
 		for result := range g.api.client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
 			if result.Error != nil {
