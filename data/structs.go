@@ -2,6 +2,7 @@ package data
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/KnutZuidema/golio/riot/lol"
 )
@@ -18,6 +19,22 @@ type MatchParticipantStats struct {
 	Win               bool
 	MatchType         string
 	DurationMinutes   int
+}
+
+func (stats MatchParticipantStats) Slice() []string {
+	return []string{
+		stats.ChampionName,
+		strconv.Itoa(stats.Level),
+		strconv.Itoa(stats.Kills),
+		strconv.Itoa(stats.Deaths),
+		strconv.Itoa(stats.Assists),
+		strconv.FormatFloat(stats.KillParticipation, 'f', -1, 64),
+		strconv.Itoa(stats.CS),
+		strconv.FormatFloat(stats.CSPerMinute, 'f', -1, 64),
+		strconv.FormatBool(stats.Win),
+		stats.MatchType,
+		strconv.Itoa(stats.DurationMinutes),
+	}
 }
 
 func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {

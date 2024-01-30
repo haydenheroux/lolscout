@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"encoding/csv"
 	"lolscout/api"
 	"lolscout/data"
 	"lolscout/tui"
+	"os"
 	"time"
 
 	"github.com/KnutZuidema/golio/riot/lol"
@@ -37,31 +38,47 @@ func main() {
 
 	queues := []data.Queue{data.Normal, data.Ranked, data.Clash}
 
-	matches, err := client.Get(dwx, queues).From(time.Now().AddDate(0, -1, 0))
-
+	matches, err := client.Get(dwx, queues).From(time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		return
 	}
 
-	duos := data.FilterBySummoners(matches, []*lol.Summoner{dwx, marbee})
+	dwxFile, err := os.Create("dwx.csv")
+	if err != nil {
+		return
+	}
+	defer dwxFile.Close()
 
-	dwxCount := 0
-	marbeeCount := 0
+	marbeeFile, err := os.Create("marbee.csv")
+	if err != nil {
+		return
+	}
+	defer marbeeFile.Close()
+
+	dwxWriter := csv.NewWriter(dwxFile)
+	defer dwxWriter.Flush()
+
+	marbeeWriter := csv.NewWriter(marbeeFile)
+	defer marbeeWriter.Flush()
+
+	header := []string{"champion", "level", "kills", "deaths", "assists", "kp", "cs", "cs/m", "win?", "matchType", "matchDurationMinutes"}
+
+	dwxWriter.Write(header)
+	marbeeWriter.Write(header)
+
+	duos := data.FilterBySummoners(matches, []*lol.Summoner{dwx, marbee})
 
 	for _, match := range duos {
 		dwxStats := data.GetStats(match, dwx)
+
+		dwxWriter.Write(dwxStats.Slice())
+
 		marbeeStats := data.GetStats(match, marbee)
 
-		if dwxStats.CS > marbeeStats.CS {
-			dwxCount += 1
-		} else if marbeeStats.CS > dwxStats.CS {
-			marbeeCount += 1
-		}
+		marbeeWriter.Write(marbeeStats.Slice())
 
 		println(tui.MatchParticipantModel{MatchParticipantStats: dwxStats}.View())
 		println(tui.MatchParticipantModel{MatchParticipantStats: marbeeStats}.View())
 		println()
 	}
-
-	fmt.Printf("dwx total: %d marbee total: %d\n", dwxCount, marbeeCount)
 }
