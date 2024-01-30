@@ -1,10 +1,7 @@
 package api
 
 import (
-	"fmt"
 	"time"
-
-	"lolscout/data"
 
 	"github.com/KnutZuidema/golio"
 	"github.com/KnutZuidema/golio/api"
@@ -12,234 +9,113 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type LeagueAPI struct {
+type API struct {
 	client *golio.Client
 }
 
-func New(key string) LeagueAPI {
-	return LeagueAPI{
+func New(key string) API {
+	return API{
 		client: golio.NewClient(key,
 			golio.WithRegion(api.RegionNorthAmerica),
 			golio.WithLogger(log.New())),
 	}
 }
 
-func (api LeagueAPI) GetPlayer(name string) ([]data.MatchParticipantStats, error) {
+type getter struct {
+	api      API
+	summoner *lol.Summoner
+	// TODO Make array of enum
+	queues []int
+}
+
+func (api API) Get(summoner *lol.Summoner, queues []int) getter {
+	return getter{
+		api,
+		summoner,
+		queues,
+	}
+}
+
+func (api API) Summoner(name string) (*lol.Summoner, error) {
 	summoner, err := api.client.Riot.LoL.Summoner.GetByName(name)
 	if err != nil {
-		return []data.MatchParticipantStats{}, err
+		return nil, err
 	}
 
-	matchIds, err := api.client.Riot.LoL.Match.List(summoner.PUUID, 0, 20)
+	return summoner, err
+}
+
+func (g getter) Recent(name string) ([]*lol.Match, error) {
+	matchIds, err := g.api.client.Riot.LoL.Match.List(g.summoner.PUUID, 0, 20)
 	if err != nil {
-		return []data.MatchParticipantStats{}, err
+		return []*lol.Match{}, err
 	}
 
-	var summonerMatchParticipants []data.MatchParticipantStats
+	var matches []*lol.Match
 
 	for _, matchId := range matchIds {
-		match, err := api.client.Riot.LoL.Match.Get(matchId)
+		match, err := g.api.client.Riot.LoL.Match.Get(matchId)
 		if err != nil {
-			return []data.MatchParticipantStats{}, err
+			return []*lol.Match{}, err
 		}
 
-		summonerMatchParticipants = append(summonerMatchParticipants, transformMatch(match, summoner))
-	}
-
-	return summonerMatchParticipants, nil
-}
-
-func (api LeagueAPI) DoCS() {
-	dwx, err := api.client.Riot.LoL.Summoner.GetByName("dwx")
-	if err != nil {
-		return
-	}
-
-	marbee, err := api.client.Riot.LoL.Summoner.GetByName("marbee")
-	if err != nil {
-		return
-	}
-
-	matches, err := api.getMonthMatches(dwx)
-
-	if err != nil {
-		return
-	}
-
-	duos, err := api.filterMatchesByParticipants(matches, []*lol.Summoner{dwx, marbee})
-
-	if err != nil {
-		return
-	}
-
-	var duoSR []lol.Match
-
-	for _, match := range duos {
-		queue := match.Info.QueueID
-
-		ranked := 420
-		normal := 400
-		clash := 700
-
-		if queue == ranked || queue == normal || queue == clash {
-			duoSR = append(duoSR, match)
-		}
-	}
-
-	dwxCount := 0
-	marbeeCount := 0
-
-	for _, match := range duoSR {
-		dwxData := transformMatch(&match, dwx)
-		marbeeData := transformMatch(&match, marbee)
-
-		dwxCS := dwxData.CS
-		marbeeCS := marbeeData.CS
-
-		dwxString := "dwx " + summonerStatsToString(dwxData)
-		marbeeString := "marbee " + summonerStatsToString(marbeeData)
-
-		println(dwxString)
-		println(marbeeString)
-		println()
-
-		if dwxCS > marbeeCS {
-			dwxCount += 1
-		} else if marbeeCS > dwxCS {
-			marbeeCount += 1
-		}
-	}
-
-	fmt.Printf("dwx total: %d marbee total: %d\n", dwxCount, marbeeCount)
-}
-
-func summonerStatsToString(data data.MatchParticipantStats) string {
-	return fmt.Sprintf("(%s) cs: %d, cs/m: %.2f, kp: %.2f, won?: %v", data.ChampionName, data.CS, data.CSPerMinute, data.KillParticipation*100, data.Win)
-}
-
-func (api LeagueAPI) getMonthMatches(summoner *lol.Summoner) ([]lol.Match, error) {
-	// monthAgo := time.Now().AddDate().AddDate(0, -1, 0)
-	monthAgo := time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)
-
-	predicate := func(match lol.Match) bool {
-		sec := match.Info.GameStartTimestamp / 1000
-
-		matchTime := time.Unix(sec, 0)
-
-		println("got match")
-
-		return matchTime.After(monthAgo)
-	}
-
-	return api.getMatchesUntil(summoner, predicate)
-}
-
-func (api LeagueAPI) getMatchesUntil(summoner *lol.Summoner, predicate func(lol.Match) bool) ([]lol.Match, error) {
-	var matches []lol.Match
-
-	for result := range api.client.Riot.LoL.Match.ListStream(summoner.PUUID) {
-		if result.Error != nil {
-			break
-		}
-
-		match, err := api.client.Riot.LoL.Match.Get(result.MatchID)
-		if err != nil {
-			break
-		}
-
-		if !predicate(*match) {
-			break
-		}
-
-		matches = append(matches, *match)
+		matches = append(matches, match)
 	}
 
 	return matches, nil
 }
 
-func (api LeagueAPI) filterMatchesByParticipants(matches []lol.Match, summoners []*lol.Summoner) ([]lol.Match, error) {
-	var result []lol.Match
+func (g getter) Until(summoner *lol.Summoner, predicate func(*lol.Match) bool) ([]*lol.Match, error) {
+	var matches []*lol.Match
 
-	for _, match := range matches {
-		if hasParticipants(match, summoners) {
-			result = append(result, match)
-		}
-	}
-
-	return result, nil
-}
-
-func hasParticipants(match lol.Match, summoners []*lol.Summoner) bool {
-	for _, summoner := range summoners {
-		participated := false
-
-		for _, participantPUUID := range match.Metadata.Participants {
-			if summoner.PUUID == participantPUUID {
-				participated = true
-			}
+	for result := range g.api.client.Riot.LoL.Match.ListStream(summoner.PUUID) {
+		if result.Error != nil {
+			break
 		}
 
-		if !participated {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (api LeagueAPI) getPUUIDS(names []string) ([]string, error) {
-	var puuids []string
-
-	for _, name := range names {
-		summoner, err := api.client.Riot.LoL.Summoner.GetByName(name)
-
+		match, err := g.api.client.Riot.LoL.Match.Get(result.MatchID)
 		if err != nil {
-			return []string{}, err
+			break
 		}
 
-		puuids = append(puuids, summoner.PUUID)
+		if !predicate(match) {
+			break
+		}
+
+		matches = append(matches, match)
 	}
 
-	return puuids, nil
+	return matches, nil
 }
 
-func transformMatch(match *lol.Match, summoner *lol.Summoner) data.MatchParticipantStats {
-	teamKills := make(map[int]int)
+func (g getter) From(startTime time.Time) ([]*lol.Match, error) {
+	return g.Between(startTime, time.Now())
+}
 
-	for _, participant := range match.Info.Participants {
-		teamKills[participant.TeamID] += participant.Kills
+func (g getter) Between(startTime time.Time, endTime time.Time) ([]*lol.Match, error) {
+	var matches []*lol.Match
+
+	options := &lol.MatchListOptions{
+		StartTime: startTime,
+		EndTime:   endTime,
 	}
 
-	durationMinutes := match.Info.GameDuration / 60
+	for _, queue := range g.queues {
+		options.Queue = &queue
 
-	for _, participant := range match.Info.Participants {
-		if participant.PUUID == summoner.PUUID {
-			var matchParticipant data.MatchParticipantStats
+		for result := range g.api.client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
+			if result.Error != nil {
+				break
+			}
 
-			matchParticipant.ChampionName = participant.ChampionName
-			matchParticipant.Level = participant.ChampLevel
-			matchParticipant.Kills = participant.Kills
-			matchParticipant.Deaths = participant.Deaths
-			matchParticipant.Assists = participant.Assists
-			matchParticipant.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
-			matchParticipant.CS = participant.TotalMinionsKilled
-			matchParticipant.CSPerMinute = float64(participant.TotalMinionsKilled) / float64(durationMinutes)
-			matchParticipant.Win = participant.Win
-			matchParticipant.MatchType = lookupQueue(match.Info.QueueID)
-			matchParticipant.DurationMinutes = durationMinutes
+			match, err := g.api.client.Riot.LoL.Match.Get(result.MatchID)
+			if err != nil {
+				break
+			}
 
-			return matchParticipant
+			matches = append(matches, match)
 		}
 	}
 
-	// TODO
-	return data.MatchParticipantStats{}
-}
-
-func lookupQueue(queueId int) string {
-	switch queueId {
-	case 400:
-		return "Normal"
-	}
-	return fmt.Sprintf("TODO: %d", queueId)
+	return matches, nil
 }
