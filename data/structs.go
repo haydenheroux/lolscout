@@ -48,21 +48,21 @@ func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
-			var matchParticipant MatchParticipantStats
+			var stats MatchParticipantStats
 
-			matchParticipant.ChampionName = participant.ChampionName
-			matchParticipant.Level = participant.ChampLevel
-			matchParticipant.Kills = participant.Kills
-			matchParticipant.Deaths = participant.Deaths
-			matchParticipant.Assists = participant.Assists
-			matchParticipant.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
-			matchParticipant.CS = participant.TotalMinionsKilled
-			matchParticipant.CSPerMinute = float64(participant.TotalMinionsKilled) / float64(durationMinutes)
-			matchParticipant.Win = participant.Win
-			matchParticipant.MatchType = lookupQueue(Queue(match.Info.QueueID))
-			matchParticipant.DurationMinutes = durationMinutes
+			stats.ChampionName = participant.ChampionName
+			stats.Level = participant.ChampLevel
+			stats.Kills = participant.Kills
+			stats.Deaths = participant.Deaths
+			stats.Assists = participant.Assists
+			stats.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
+			stats.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
+			stats.CSPerMinute = float64(stats.CS) / float64(durationMinutes)
+			stats.Win = participant.Win
+			stats.MatchType = lookupQueue(Queue(match.Info.QueueID))
+			stats.DurationMinutes = durationMinutes
 
-			return matchParticipant
+			return stats
 		}
 	}
 
