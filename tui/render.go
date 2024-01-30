@@ -38,7 +38,8 @@ func (mp MatchParticipantModel) infoSectionView() string {
 
 	durationString := fmt.Sprintf("%dm", mp.DurationMinutes)
 
-	width := max(len(mp.MatchType), len(durationString))
+	minWidth := 10
+	width := max(len(mp.MatchType), len(durationString), minWidth)
 
 	matchType := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
 	renderedMatchType := matchType.Render(mp.MatchType)
@@ -54,7 +55,8 @@ func (mp MatchParticipantModel) championView() string {
 
 	levelString := fmt.Sprintf("Lvl. %d", mp.Level)
 
-	width := max(len(levelString), len(mp.ChampionName))
+	minWidth := 10
+	width := max(len(levelString), len(mp.ChampionName), minWidth)
 
 	championName := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
 
@@ -113,13 +115,19 @@ func (mp MatchParticipantModel) kdaView() string {
 
 	kdaString := fmt.Sprintf("%d/%d/%d", mp.Kills, mp.Deaths, mp.Assists)
 
-	width := max(len(kdaString), lipgloss.Width(renderedKdaBottomSection))
+	minWidth := 24
+	width := max(len(kdaString), lipgloss.Width(renderedKdaBottomSection), minWidth)
+
+	// TODO Sketchy
+	kdaBottomSection := lipgloss.NewStyle().Background(background).Width(width)
+
+	rerenderedKdaBottomSection := kdaBottomSection.Render(renderedKdaBottomSection)
 
 	kda := lipgloss.NewStyle().Background(background).Bold(true).Width(width) //.Align(lipgloss.Center)
 
 	renderedKda := kda.Render(kdaString)
 
-	return lipgloss.JoinVertical(lipgloss.Left, renderedKda, renderedKdaBottomSection)
+	return lipgloss.JoinVertical(lipgloss.Left, renderedKda, rerenderedKdaBottomSection)
 }
 
 func (mp MatchParticipantModel) creepScoreView() string {
@@ -127,7 +135,7 @@ func (mp MatchParticipantModel) creepScoreView() string {
 
 	csString := fmt.Sprintf("%d CS", mp.CS)
 
-	csPerMinuteString := fmt.Sprintf("%.1f CS/M", mp.CSPerMinute)
+	csPerMinuteString := fmt.Sprintf("%.1f/m", mp.CSPerMinute)
 
 	csPerMinute := lipgloss.NewStyle().Background(background)
 
@@ -137,11 +145,18 @@ func (mp MatchParticipantModel) creepScoreView() string {
 
 	renderedCsPerMinute := csPerMinute.Render(csPerMinuteString)
 
-	cs := lipgloss.NewStyle().Background(background).Bold(true).Width(lipgloss.Width(renderedCsPerMinute))
+	minWidth := 10
+	width := max(len(csString), lipgloss.Width(renderedCsPerMinute), minWidth)
+
+	csPerMinute = csPerMinute.Width(width)
+
+	rerenderedCsPerMinute := csPerMinute.Render(renderedCsPerMinute)
+
+	cs := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
 
 	renderedCs := cs.Render(csString)
 
-	return lipgloss.JoinVertical(lipgloss.Left, renderedCs, renderedCsPerMinute)
+	return lipgloss.JoinVertical(lipgloss.Left, renderedCs, rerenderedCsPerMinute)
 }
 
 func (mp MatchParticipantModel) View() string {
@@ -151,7 +166,7 @@ func (mp MatchParticipantModel) View() string {
 
 	renderedBody := theme.joinHorizontal(mp.infoSectionView(), mp.championView(), mp.kdaView(), mp.creepScoreView())
 
-	container := lipgloss.NewStyle().Background(background).Border(lipgloss.BlockBorder(), false, false, false, true).BorderForeground(border).Padding(2).MarginBottom(1).Width(60)
+	container := lipgloss.NewStyle().Background(background).Border(lipgloss.BlockBorder(), false, false, false, true).BorderForeground(border).Padding(2).MarginBottom(1)
 
 	return container.Render(renderedBody)
 }
