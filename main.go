@@ -2,72 +2,101 @@ package main
 
 import (
 	"encoding/csv"
+	"errors"
+	"fmt"
 	"lolscout/api"
 	"lolscout/data"
-	"lolscout/tui"
 	"os"
 	"time"
 
-	"github.com/KnutZuidema/golio/riot/lol"
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
 )
 
 type Environment struct {
-	RiotApiKey string `env:"RIOT_API_KEY"`
+	RiotApiKey string `env:"RIOT_API_KEY,required=true"`
 }
 
+var environment Environment
+
 func main() {
-	var environment Environment
 	_, err := env.UnmarshalFromEnviron(&environment)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if len(environment.RiotApiKey) == 0 {
-		log.Fatal("RIOT_API_KEY missing from environment")
+	app := &cli.App{
+		Commands: []*cli.Command{
+			{
+				Name:  "get",
+				Usage: "get recent matches",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "day",
+						Usage: "gets the last day of matches",
+						Action: func(c *cli.Context) error {
+							return do(c, time.Now().AddDate(0, 0, -1))
+						},
+					},
+					{
+						Name:  "week",
+						Usage: "gets the last week of matches",
+						Action: func(c *cli.Context) error {
+							return do(c, time.Now().AddDate(0, 0, -7))
+						},
+					},
+					{
+						Name:  "month",
+						Usage: "gets the last month of matches",
+						Action: func(c *cli.Context) error {
+							return do(c, time.Now().AddDate(0, -1, 0))
+						},
+					},
+				},
+			},
+		},
 	}
 
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func do(c *cli.Context, startTime time.Time) error {
 	client := api.New(environment.RiotApiKey)
 
-	dwx, err := client.Summoner("dwx")
-	if err != nil {
-		log.Fatal(err)
-	}
+	puuid := c.Args().First()
 
-	marbee, err := client.Summoner("marbee")
+	summoner, err := client.SummonerByPUUID(puuid)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	queues := []data.Queue{data.Normal, data.Ranked, data.Clash}
 
-	matches, err := client.Get(dwx, queues).From(time.Now().AddDate(0, -1, 0))
+	matches, err := client.Get(summoner, queues).From(startTime)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	var dwxStatsSlice, marbeeStatsSlice []data.MatchParticipantStats
-
-	duos := data.FilterBySummoners(matches, []*lol.Summoner{dwx, marbee})
-
-	for _, match := range duos {
-		dwxStats := data.GetStats(match, dwx)
-		dwxStatsSlice = append(dwxStatsSlice, dwxStats)
-
-		marbeeStats := data.GetStats(match, marbee)
-		marbeeStatsSlice = append(marbeeStatsSlice, marbeeStats)
-
-		println(tui.MatchParticipantModel{MatchParticipantStats: dwxStats}.View())
-		println(tui.MatchParticipantModel{MatchParticipantStats: marbeeStats}.View())
-		println()
+	if len(matches) == 0 {
+		return errors.New("summoner has no matches within the timeframe")
 	}
 
-	writeCSV("dwx.csv", dwxStatsSlice)
-	writeCSV("marbee.csv", marbeeStatsSlice)
+	var stats []data.MatchParticipantStats
+
+	for _, match := range matches {
+		stats = append(stats, data.GetStats(match, summoner))
+	}
+
+	// TODO use name/tagline for filename
+	filename := fmt.Sprintf("%s.csv", puuid)
+
+	return writeCSV(filename, stats)
 }
 
-func writeCSV(name string, statsSlice []data.MatchParticipantStats) error {
+func writeCSV(name string, stats []data.MatchParticipantStats) error {
 	file, err := os.Create(name)
 	if err != nil {
 		return err
@@ -79,9 +108,9 @@ func writeCSV(name string, statsSlice []data.MatchParticipantStats) error {
 
 	header := false
 
-	for _, stats := range statsSlice {
+	for _, s := range stats {
 		if !header {
-			err := writer.Write(stats.Header())
+			err := writer.Write(s.Header())
 
 			if err != nil {
 				return err
@@ -90,7 +119,7 @@ func writeCSV(name string, statsSlice []data.MatchParticipantStats) error {
 			header = true
 		}
 
-		err := writer.Write(stats.Row())
+		err := writer.Write(s.Row())
 		if err != nil {
 			return err
 		}

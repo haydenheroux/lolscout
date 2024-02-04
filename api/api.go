@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"lolscout/data"
 	"time"
 
@@ -36,8 +37,23 @@ func (api API) Get(summoner *lol.Summoner, queues []data.Queue) getter {
 	}
 }
 
-func (api API) Summoner(name string) (*lol.Summoner, error) {
+// TODO due for deprecation
+func (api API) SummonerByName(name string) (*lol.Summoner, error) {
 	summoner, err := api.client.Riot.LoL.Summoner.GetByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return summoner, err
+}
+
+// TODO add when golio is updated with PR #60
+func (api API) SummonerByTag(name, tag string) (*lol.Summoner, error) {
+	return nil, errors.New("unimplemented")
+}
+
+func (api API) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
+	summoner, err := api.client.Riot.LoL.Summoner.GetByPUUID(puuid)
 	if err != nil {
 		return nil, err
 	}
