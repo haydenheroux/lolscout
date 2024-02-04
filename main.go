@@ -7,6 +7,7 @@ import (
 	"lolscout/api"
 	"lolscout/data"
 	"os"
+	"strings"
 	"time"
 
 	env "github.com/Netflix/go-env"
@@ -73,9 +74,16 @@ func main() {
 func do(c *cli.Context, startTime time.Time) error {
 	client := api.New(environment.RiotApiKey)
 
-	puuid := c.Args().First()
+	fields := strings.Split(c.Args().First(), "#")
 
-	summoner, err := client.SummonerByPUUID(puuid)
+	if len(fields) != 2 {
+		return errors.New("incorrect number of fields for Riot ID")
+	}
+
+	name := fields[0]
+	tag := fields[1]
+
+	summoner, err := client.TODO_SummonerByTag_TODO(name, tag)
 	if err != nil {
 		return err
 	}
@@ -97,8 +105,7 @@ func do(c *cli.Context, startTime time.Time) error {
 		stats = append(stats, data.GetStats(match, summoner))
 	}
 
-	// TODO use name/tagline for filename
-	filename := fmt.Sprintf("%s.csv", puuid)
+	filename := fmt.Sprintf("%s#%s.csv", name, tag)
 
 	return writeCSV(filename, stats)
 }

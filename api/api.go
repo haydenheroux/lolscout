@@ -1,8 +1,11 @@
 package api
 
 import (
-	"errors"
+	"encoding/json"
+	"fmt"
+	"io"
 	"lolscout/data"
+	"net/http"
 	"time"
 
 	"github.com/KnutZuidema/golio"
@@ -12,15 +15,60 @@ import (
 )
 
 type API struct {
-	client *golio.Client
+	APIKey string
+	Client *golio.Client
 }
 
-func New(key string) API {
+func New(apiKey string) API {
 	return API{
-		client: golio.NewClient(key,
+		APIKey: apiKey,
+		Client: golio.NewClient(apiKey,
 			golio.WithRegion(api.RegionNorthAmerica),
 			golio.WithLogger(log.New())),
 	}
+}
+
+type summonerByTagResult struct {
+	PUUID string `json:"puuid"`
+	Name  string `json:"gameName"`
+	Tag   string `json:"tagLine"`
+}
+
+// TODO change when golio is updated with PR #60
+func (api API) TODO_SummonerByTag_TODO(name, tag string) (*lol.Summoner, error) {
+	url := fmt.Sprintf("https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%s/%s", name, tag)
+
+	client := &http.Client{}
+
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("X-Riot-Token", api.APIKey)
+
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	contents, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var result summonerByTagResult
+
+	if err := json.Unmarshal(contents, &result); err != nil {
+		return nil, err
+	}
+
+	return api.SummonerByPUUID(result.PUUID)
+}
+
+func (api API) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
+	summoner, err := api.Client.Riot.LoL.Summoner.GetByPUUID(puuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return summoner, err
 }
 
 type getter struct {
@@ -37,32 +85,8 @@ func (api API) Get(summoner *lol.Summoner, queues []data.Queue) getter {
 	}
 }
 
-// TODO due for deprecation
-func (api API) SummonerByName(name string) (*lol.Summoner, error) {
-	summoner, err := api.client.Riot.LoL.Summoner.GetByName(name)
-	if err != nil {
-		return nil, err
-	}
-
-	return summoner, err
-}
-
-// TODO add when golio is updated with PR #60
-func (api API) SummonerByTag(name, tag string) (*lol.Summoner, error) {
-	return nil, errors.New("unimplemented")
-}
-
-func (api API) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
-	summoner, err := api.client.Riot.LoL.Summoner.GetByPUUID(puuid)
-	if err != nil {
-		return nil, err
-	}
-
-	return summoner, err
-}
-
 func (g getter) Recent(name string) ([]*lol.Match, error) {
-	matchIds, err := g.api.client.Riot.LoL.Match.List(g.summoner.PUUID, 0, 20)
+	matchIds, err := g.api.Client.Riot.LoL.Match.List(g.summoner.PUUID, 0, 20)
 	if err != nil {
 		return []*lol.Match{}, err
 	}
@@ -70,7 +94,7 @@ func (g getter) Recent(name string) ([]*lol.Match, error) {
 	var matches []*lol.Match
 
 	for _, matchId := range matchIds {
-		match, err := g.api.client.Riot.LoL.Match.Get(matchId)
+		match, err := g.api.Client.Riot.LoL.Match.Get(matchId)
 		if err != nil {
 			return []*lol.Match{}, err
 		}
@@ -84,12 +108,12 @@ func (g getter) Recent(name string) ([]*lol.Match, error) {
 func (g getter) Until(summoner *lol.Summoner, predicate func(*lol.Match) bool) ([]*lol.Match, error) {
 	var matches []*lol.Match
 
-	for result := range g.api.client.Riot.LoL.Match.ListStream(summoner.PUUID) {
+	for result := range g.api.Client.Riot.LoL.Match.ListStream(summoner.PUUID) {
 		if result.Error != nil {
 			break
 		}
 
-		match, err := g.api.client.Riot.LoL.Match.Get(result.MatchID)
+		match, err := g.api.Client.Riot.LoL.Match.Get(result.MatchID)
 		if err != nil {
 			break
 		}
@@ -121,12 +145,12 @@ func (g getter) Between(startTime time.Time, endTime time.Time) ([]*lol.Match, e
 		queue_ := int(queue)
 		options.Queue = &queue_
 
-		for result := range g.api.client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
+		for result := range g.api.Client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
 			if result.Error != nil {
 				break
 			}
 
-			match, err := g.api.client.Riot.LoL.Match.Get(result.MatchID)
+			match, err := g.api.Client.Riot.LoL.Match.Get(result.MatchID)
 			if err != nil {
 				break
 			}
