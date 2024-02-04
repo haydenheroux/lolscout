@@ -24,23 +24,27 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if len(environment.RiotApiKey) == 0 {
+		log.Fatal("RIOT_API_KEY missing from environment")
+	}
+
 	client := api.New(environment.RiotApiKey)
 
 	dwx, err := client.Summoner("dwx")
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	marbee, err := client.Summoner("marbee")
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	queues := []data.Queue{data.Normal, data.Ranked, data.Clash}
 
 	matches, err := client.Get(dwx, queues).From(time.Now().AddDate(0, -1, 0))
 	if err != nil {
-		return
+		log.Fatal(err)
 	}
 
 	var dwxStatsSlice, marbeeStatsSlice []data.MatchParticipantStats
