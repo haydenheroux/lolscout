@@ -36,7 +36,7 @@ func (mp MatchParticipantModel) theme() theme {
 func (mp MatchParticipantModel) infoSectionView() string {
 	background := mp.theme().background
 
-	durationString := fmt.Sprintf("%dm", mp.DurationMinutes)
+	durationString := fmt.Sprintf("%dm", int(mp.DurationMinutes))
 
 	minWidth := 10
 	width := max(len(mp.MatchType), len(durationString), minWidth)

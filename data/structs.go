@@ -8,59 +8,140 @@ import (
 )
 
 type MatchParticipantStats struct {
-	ChampionName      string
-	Level             int
-	Kills             int
-	Deaths            int
-	Assists           int
-	KillParticipation float64
-	CS                int
-	CSPerMinute       float64
-	Win               bool
-	MatchType         string
-	DurationMinutes   int
+	Assists              int
+	CS                   int
+	CSPerMinute          float64
+	ChampionName         string
+	ControlWardsPlaced   int
+	DamageDealt          int
+	DamageDealtPerMinute float64
+	DamageDealtShare     float64
+	Deaths               int
+	DurationMinutes      float64
+	KillParticipation    float64
+	Kills                int
+	Level                int
+	MatchType            string
+	TurretsTaken         int
+	WardsKilled          int
+	WardsPlaced          int
+	Win                  bool
 }
 
-func (stats MatchParticipantStats) Slice() []string {
+func formatBool(b bool) string {
+	return strconv.FormatBool(b)
+}
+
+func formatInt(i int) string {
+	return strconv.Itoa(i)
+}
+
+func formatFloat(f float64) string {
+	return strconv.FormatFloat(f, 'f', -1, 64)
+}
+
+func (stats MatchParticipantStats) Map() map[string]string {
+	return map[string]string{
+		"assists":         formatInt(stats.Assists),
+		"cs":              formatInt(stats.CS),
+		"cs/m":            formatFloat(stats.CSPerMinute),
+		"champion":        stats.ChampionName,
+		"controlWards":    formatInt(stats.ControlWardsPlaced),
+		"dmg":             formatInt(stats.DamageDealt),
+		"dmg/m":           formatFloat(stats.DamageDealtPerMinute),
+		"dmg%":            formatFloat(stats.DamageDealtShare),
+		"deaths":          formatInt(stats.Deaths),
+		"durationMinutes": formatFloat(stats.DurationMinutes),
+		"kp":              formatFloat(stats.KillParticipation),
+		"kills":           formatInt(stats.Kills),
+		"level":           formatInt(stats.Level),
+		"matchType":       stats.MatchType,
+		"turrets":         formatInt(stats.TurretsTaken),
+		"wardsKilled":     formatInt(stats.WardsKilled),
+		"wardsPlaced":     formatInt(stats.WardsPlaced),
+		"win":             formatBool(stats.Win),
+	}
+}
+
+func (stats MatchParticipantStats) Header() []string {
 	return []string{
+		"assists",
+		"cs",
+		"cs/m",
+		"champion",
+		"controlWards",
+		"dmg",
+		"dmg/m",
+		"dmg%",
+		"deaths",
+		"durationMinutes",
+		"kp",
+		"kills",
+		"level",
+		"matchType",
+		"turrets",
+		"wardsKilled",
+		"wardsPlaced",
+		"win",
+	}
+}
+
+func (stats MatchParticipantStats) Row() []string {
+	return []string{
+		formatInt(stats.Assists),
+		formatInt(stats.CS),
+		formatFloat(stats.CSPerMinute),
 		stats.ChampionName,
-		strconv.Itoa(stats.Level),
-		strconv.Itoa(stats.Kills),
-		strconv.Itoa(stats.Deaths),
-		strconv.Itoa(stats.Assists),
-		strconv.FormatFloat(stats.KillParticipation, 'f', -1, 64),
-		strconv.Itoa(stats.CS),
-		strconv.FormatFloat(stats.CSPerMinute, 'f', -1, 64),
-		strconv.FormatBool(stats.Win),
+		formatInt(stats.ControlWardsPlaced),
+		formatInt(stats.DamageDealt),
+		formatFloat(stats.DamageDealtPerMinute),
+		formatFloat(stats.DamageDealtShare),
+		formatInt(stats.Deaths),
+		formatFloat(stats.DurationMinutes),
+		formatFloat(stats.KillParticipation),
+		formatInt(stats.Kills),
+		formatInt(stats.Level),
 		stats.MatchType,
-		strconv.Itoa(stats.DurationMinutes),
+		formatInt(stats.TurretsTaken),
+		formatInt(stats.WardsKilled),
+		formatInt(stats.WardsPlaced),
+		formatBool(stats.Win),
 	}
 }
 
 func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {
+	teamDamage := make(map[int]int)
 	teamKills := make(map[int]int)
 
 	for _, participant := range match.Info.Participants {
+		teamDamage[participant.TeamID] += participant.TotalDamageDealt
 		teamKills[participant.TeamID] += participant.Kills
 	}
 
-	durationMinutes := match.Info.GameDuration / 60
+	durationMinutes := float64(match.Info.GameDuration) / 60.0
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
 			var stats MatchParticipantStats
 
-			stats.ChampionName = participant.ChampionName
-			stats.Level = participant.ChampLevel
-			stats.Kills = participant.Kills
-			stats.Deaths = participant.Deaths
 			stats.Assists = participant.Assists
-			stats.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
 			stats.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
 			stats.CSPerMinute = float64(stats.CS) / float64(durationMinutes)
-			stats.Win = participant.Win
-			stats.MatchType = lookupQueue(Queue(match.Info.QueueID))
+			stats.ChampionName = participant.ChampionName
+			stats.ControlWardsPlaced = participant.DetectorWardsPlaced
+			stats.DamageDealt = participant.TotalDamageDealt
+			stats.DamageDealtPerMinute = float64(stats.DamageDealt) / float64(durationMinutes)
+			stats.DamageDealtShare = float64(stats.DamageDealt) / float64(teamDamage[participant.TeamID])
+			stats.Deaths = participant.Deaths
 			stats.DurationMinutes = durationMinutes
+			stats.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
+			stats.Kills = participant.Kills
+			stats.Level = participant.ChampLevel
+			stats.MatchType = lookupQueue(Queue(match.Info.QueueID))
+			stats.TurretsTaken = participant.TurretTakedowns
+			stats.WardsKilled = participant.WardsKilled
+			stats.WardsPlaced = participant.WardsPlaced
+			stats.Win = participant.Win
 
 			return stats
 		}
