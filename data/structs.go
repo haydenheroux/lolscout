@@ -22,6 +22,7 @@ type MatchParticipantStats struct {
 	Kills                int
 	Level                int
 	MatchType            string
+	Position             string
 	TurretsTaken         int
 	WardsKilled          int
 	WardsPlaced          int
@@ -56,6 +57,7 @@ func (stats MatchParticipantStats) Map() map[string]string {
 		"kills":           formatInt(stats.Kills),
 		"level":           formatInt(stats.Level),
 		"matchType":       stats.MatchType,
+		"posiiton":        stats.Position,
 		"turrets":         formatInt(stats.TurretsTaken),
 		"wardsKilled":     formatInt(stats.WardsKilled),
 		"wardsPlaced":     formatInt(stats.WardsPlaced),
@@ -79,6 +81,7 @@ func (stats MatchParticipantStats) Header() []string {
 		"kills",
 		"level",
 		"matchType",
+		"position",
 		"turrets",
 		"wardsKilled",
 		"wardsPlaced",
@@ -102,6 +105,7 @@ func (stats MatchParticipantStats) Row() []string {
 		formatInt(stats.Kills),
 		formatInt(stats.Level),
 		stats.MatchType,
+		stats.Position,
 		formatInt(stats.TurretsTaken),
 		formatInt(stats.WardsKilled),
 		formatInt(stats.WardsPlaced),
@@ -138,6 +142,7 @@ func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {
 			stats.Kills = participant.Kills
 			stats.Level = participant.ChampLevel
 			stats.MatchType = lookupQueue(Queue(match.Info.QueueID))
+			stats.Position = participant.TeamPosition
 			stats.TurretsTaken = participant.TurretTakedowns
 			stats.WardsKilled = participant.WardsKilled
 			stats.WardsPlaced = participant.WardsPlaced
