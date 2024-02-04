@@ -31,32 +31,32 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "get",
-				Usage: "get recent matches",
+				Usage: "Get data from recent matches",
 				Subcommands: []*cli.Command{
 					{
 						Name:  "day",
-						Usage: "gets the last day of matches",
+						Usage: "Get data from the last day of matches",
 						Action: func(c *cli.Context) error {
 							return do(c, time.Now().AddDate(0, 0, -1))
 						},
 					},
 					{
 						Name:  "week",
-						Usage: "gets the last week of matches",
+						Usage: "Get data from the last week of matches",
 						Action: func(c *cli.Context) error {
 							return do(c, time.Now().AddDate(0, 0, -7))
 						},
 					},
 					{
 						Name:  "month",
-						Usage: "gets the last month of matches",
+						Usage: "Get data from last month of matches",
 						Action: func(c *cli.Context) error {
 							return do(c, time.Now().AddDate(0, -1, 0))
 						},
 					},
 					{
 						Name:  "year",
-						Usage: "gets the last year of matches",
+						Usage: "Get data from the last year of matches",
 						Action: func(c *cli.Context) error {
 							return do(c, time.Now().AddDate(-1, 0, 0))
 						},
