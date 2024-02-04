@@ -53,6 +53,13 @@ func main() {
 							return do(c, time.Now().AddDate(0, -1, 0))
 						},
 					},
+					{
+						Name:  "year",
+						Usage: "gets the last year of matches",
+						Action: func(c *cli.Context) error {
+							return do(c, time.Now().AddDate(-1, 0, 0))
+						},
+					},
 				},
 			},
 		},
