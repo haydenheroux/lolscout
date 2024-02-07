@@ -2,10 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"lolscout/data"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/KnutZuidema/golio"
@@ -35,7 +37,16 @@ type summonerByTagResult struct {
 }
 
 // TODO change when golio is updated with PR #60
-func (c client) TODO_SummonerByTag_TODO(name, tag string) (*lol.Summoner, error) {
+func (c client) TODO_SummonerByTag_TODO(riotId string) (*lol.Summoner, error) {
+	fields := strings.Split(riotId, "#")
+
+	if len(fields) != 2 {
+		return nil, errors.New("incorrect number of fields for Riot ID")
+	}
+
+	name := fields[0]
+	tag := fields[1]
+
 	url := fmt.Sprintf("https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%s/%s", name, tag)
 
 	client := &http.Client{}

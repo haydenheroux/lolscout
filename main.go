@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"lolscout/data"
 	"os"
-	"strings"
 	"time"
 
 	lolApi "lolscout/api/lol"
+	playvsApi "lolscout/api/playvs"
 
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
@@ -31,35 +31,91 @@ func main() {
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
-				Name:  "get",
-				Usage: "Get data from recent matches",
+				Name:  "lol",
+				Usage: "Get League of Legends matches",
 				Subcommands: []*cli.Command{
 					{
-						Name:  "day",
-						Usage: "Get data from the last day of matches",
+						Name:  "get",
+						Usage: "Get data from recent matches",
+						Subcommands: []*cli.Command{
+							{
+								Name:  "day",
+								Usage: "Get data from the last day of matches",
+								Action: func(c *cli.Context) error {
+									return do(c.Args().First(), time.Now().AddDate(0, 0, -1))
+								},
+							},
+							{
+								Name:  "week",
+								Usage: "Get data from the last week of matches",
+								Action: func(c *cli.Context) error {
+									return do(c.Args().First(), time.Now().AddDate(0, 0, -7))
+								},
+							},
+							{
+								Name:  "month",
+								Usage: "Get data from last month of matches",
+								Action: func(c *cli.Context) error {
+									return do(c.Args().First(), time.Now().AddDate(0, -1, 0))
+								},
+							},
+							{
+								Name:  "year",
+								Usage: "Get data from the last year of matches",
+								Action: func(c *cli.Context) error {
+									return do(c.Args().First(), time.Now().AddDate(-1, 0, 0))
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name:  "playvs",
+				Usage: "Get PlayVS data",
+				Subcommands: []*cli.Command{
+					{
+						Name:  "teams",
+						Usage: "Get PlayVS teams",
 						Action: func(c *cli.Context) error {
-							return do(c, time.Now().AddDate(0, 0, -1))
+							teamIds, err := playvsApi.CreateClient().Get().TeamIDs()
+
+							if err != nil {
+								return err
+							}
+
+							for _, teamId := range teamIds {
+								println(teamId)
+							}
+
+							return nil
 						},
 					},
 					{
-						Name:  "week",
-						Usage: "Get data from the last week of matches",
+						Name:  "players",
+						Usage: "Get PlayVS players",
 						Action: func(c *cli.Context) error {
-							return do(c, time.Now().AddDate(0, 0, -7))
-						},
-					},
-					{
-						Name:  "month",
-						Usage: "Get data from last month of matches",
-						Action: func(c *cli.Context) error {
-							return do(c, time.Now().AddDate(0, -1, 0))
-						},
-					},
-					{
-						Name:  "year",
-						Usage: "Get data from the last year of matches",
-						Action: func(c *cli.Context) error {
-							return do(c, time.Now().AddDate(-1, 0, 0))
+							playvsClient := playvsApi.CreateClient()
+
+							teamIds, err := playvsClient.Get().TeamIDs()
+
+							if err != nil {
+								return err
+							}
+
+							for _, teamId := range teamIds {
+
+								playerNames, err := playvsClient.Get().Players(teamId)
+								if err != nil {
+									return err
+								}
+
+								for _, playerName := range playerNames {
+									println(teamId, playerName)
+								}
+							}
+
+							return nil
 						},
 					},
 				},
@@ -72,19 +128,10 @@ func main() {
 	}
 }
 
-func do(c *cli.Context, startTime time.Time) error {
+func do(riotId string, startTime time.Time) error {
 	client := lolApi.CreateClient(environment.RiotApiKey)
 
-	fields := strings.Split(c.Args().First(), "#")
-
-	if len(fields) != 2 {
-		return errors.New("incorrect number of fields for Riot ID")
-	}
-
-	name := fields[0]
-	tag := fields[1]
-
-	summoner, err := client.TODO_SummonerByTag_TODO(name, tag)
+	summoner, err := client.TODO_SummonerByTag_TODO(riotId)
 	if err != nil {
 		return err
 	}
@@ -106,7 +153,7 @@ func do(c *cli.Context, startTime time.Time) error {
 		stats = append(stats, data.GetStats(match, summoner))
 	}
 
-	filename := fmt.Sprintf("%s#%s.csv", name, tag)
+	filename := fmt.Sprintf("%s.csv", riotId)
 
 	return writeCSV(filename, stats)
 }
