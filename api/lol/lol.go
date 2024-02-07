@@ -14,13 +14,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type API struct {
+type client struct {
 	APIKey string
 	Client *golio.Client
 }
 
-func New(apiKey string) API {
-	return API{
+func CreateClient(apiKey string) client {
+	return client{
 		APIKey: apiKey,
 		Client: golio.NewClient(apiKey,
 			golio.WithRegion(api.RegionNorthAmerica),
@@ -35,13 +35,13 @@ type summonerByTagResult struct {
 }
 
 // TODO change when golio is updated with PR #60
-func (api API) TODO_SummonerByTag_TODO(name, tag string) (*lol.Summoner, error) {
+func (c client) TODO_SummonerByTag_TODO(name, tag string) (*lol.Summoner, error) {
 	url := fmt.Sprintf("https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%s/%s", name, tag)
 
 	client := &http.Client{}
 
 	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("X-Riot-Token", api.APIKey)
+	req.Header.Set("X-Riot-Token", c.APIKey)
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -59,11 +59,11 @@ func (api API) TODO_SummonerByTag_TODO(name, tag string) (*lol.Summoner, error) 
 		return nil, err
 	}
 
-	return api.SummonerByPUUID(result.PUUID)
+	return c.SummonerByPUUID(result.PUUID)
 }
 
-func (api API) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
-	summoner, err := api.Client.Riot.LoL.Summoner.GetByPUUID(puuid)
+func (c client) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
+	summoner, err := c.Client.Riot.LoL.Summoner.GetByPUUID(puuid)
 	if err != nil {
 		return nil, err
 	}
@@ -72,17 +72,31 @@ func (api API) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
 }
 
 type getter struct {
-	api      API
+	api      client
 	summoner *lol.Summoner
 	queues   []data.Queue
 }
 
-func (api API) Get(summoner *lol.Summoner, queues []data.Queue) getter {
+func (c client) Get(summoner *lol.Summoner, queues []data.Queue) getter {
 	return getter{
-		api,
+		c,
 		summoner,
 		queues,
 	}
+}
+
+func (g getter) options() []*lol.MatchListOptions {
+	var options []*lol.MatchListOptions
+
+	for _, queue := range g.queues {
+		q := int(queue)
+
+		options = append(options, &lol.MatchListOptions{
+			Queue: &q,
+		})
+	}
+
+	return options
 }
 
 func (g getter) Recent(name string) ([]*lol.Match, error) {
@@ -108,42 +122,38 @@ func (g getter) Recent(name string) ([]*lol.Match, error) {
 func (g getter) Until(summoner *lol.Summoner, predicate func(*lol.Match) bool) ([]*lol.Match, error) {
 	var matches []*lol.Match
 
-	for result := range g.api.Client.Riot.LoL.Match.ListStream(summoner.PUUID) {
-		if result.Error != nil {
-			break
-		}
+	for _, options := range g.options() {
+		for result := range g.api.Client.Riot.LoL.Match.ListStream(summoner.PUUID, options) {
+			if result.Error != nil {
+				break
+			}
 
-		match, err := g.api.Client.Riot.LoL.Match.Get(result.MatchID)
-		if err != nil {
-			break
-		}
+			match, err := g.api.Client.Riot.LoL.Match.Get(result.MatchID)
+			if err != nil {
+				break
+			}
 
-		if !predicate(match) {
-			break
-		}
+			if !predicate(match) {
+				break
+			}
 
-		matches = append(matches, match)
+			matches = append(matches, match)
+		}
 	}
 
 	return matches, nil
 }
 
-func (g getter) From(startTime time.Time) ([]*lol.Match, error) {
+func (g getter) Since(startTime time.Time) ([]*lol.Match, error) {
 	return g.Between(startTime, time.Now())
 }
 
 func (g getter) Between(startTime time.Time, endTime time.Time) ([]*lol.Match, error) {
 	var matches []*lol.Match
 
-	options := &lol.MatchListOptions{
-		StartTime: startTime,
-		EndTime:   endTime,
-	}
-
-	for _, queue := range g.queues {
-		// TODO Hack
-		queue_ := int(queue)
-		options.Queue = &queue_
+	for _, options := range g.options() {
+		options.StartTime = startTime
+		options.EndTime = endTime
 
 		for result := range g.api.Client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
 			if result.Error != nil {

@@ -4,11 +4,12 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"lolscout/api"
 	"lolscout/data"
 	"os"
 	"strings"
 	"time"
+
+	lolApi "lolscout/api/lol"
 
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
@@ -72,7 +73,7 @@ func main() {
 }
 
 func do(c *cli.Context, startTime time.Time) error {
-	client := api.New(environment.RiotApiKey)
+	client := lolApi.CreateClient(environment.RiotApiKey)
 
 	fields := strings.Split(c.Args().First(), "#")
 
@@ -90,7 +91,7 @@ func do(c *cli.Context, startTime time.Time) error {
 
 	queues := []data.Queue{data.Normal, data.Ranked, data.Clash}
 
-	matches, err := client.Get(summoner, queues).From(startTime)
+	matches, err := client.Get(summoner, queues).Since(startTime)
 	if err != nil {
 		return err
 	}
