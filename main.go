@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"lolscout/data"
@@ -10,6 +9,7 @@ import (
 
 	lolApi "lolscout/api/lol"
 	playvsApi "lolscout/api/playvs"
+	"lolscout/export"
 
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
@@ -153,39 +153,7 @@ func do(riotId string, startTime time.Time) error {
 		stats = append(stats, data.GetStats(match, summoner))
 	}
 
-	filename := fmt.Sprintf("%s.csv", riotId)
+	name := fmt.Sprintf("%s.csv", riotId)
 
-	return writeCSV(filename, stats)
-}
-
-func writeCSV(name string, stats []data.MatchParticipantStats) error {
-	file, err := os.Create(name)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	header := false
-
-	for _, s := range stats {
-		if !header {
-			err := writer.Write(s.Header())
-
-			if err != nil {
-				return err
-			}
-
-			header = true
-		}
-
-		err := writer.Write(s.Row())
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return export.WriteMatches(name, stats)
 }
