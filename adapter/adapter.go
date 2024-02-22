@@ -7,7 +7,7 @@ import (
 	"github.com/KnutZuidema/golio/riot/lol"
 )
 
-func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchParticipantMetrics {
+func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchMetrics {
 	teamDamage := make(map[int]int)
 	teamKills := make(map[int]int)
 
@@ -20,7 +20,7 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchParticip
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
-			var metrics metrics.MatchParticipantMetrics
+			var metrics metrics.MatchMetrics
 
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
@@ -47,5 +47,5 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchParticip
 	}
 
 	// TODO
-	return &metrics.MatchParticipantMetrics{}
+	return &metrics.MatchMetrics{}
 }
