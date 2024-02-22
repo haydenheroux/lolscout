@@ -8,7 +8,7 @@ import (
 )
 
 type MatchParticipantModel struct {
-	data.MatchParticipantStats
+	data.MatchParticipantMetrics
 }
 
 type theme struct {

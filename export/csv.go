@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func WriteMatches(name string, stats []data.MatchParticipantStats) error {
+func WriteMatches(name string, stats []data.MatchParticipantMetrics) error {
 	file, err := os.Create(name)
 	if err != nil {
 		return err

@@ -1,13 +1,10 @@
 package data
 
 import (
-	"fmt"
 	"strconv"
-
-	"github.com/KnutZuidema/golio/riot/lol"
 )
 
-type MatchParticipantStats struct {
+type MatchParticipantMetrics struct {
 	Assists              int
 	CS                   int
 	CSPerMinute          float64
@@ -41,7 +38,7 @@ func formatFloat(f float64) string {
 	return strconv.FormatFloat(f, 'f', -1, 64)
 }
 
-func (stats MatchParticipantStats) Map() map[string]string {
+func (stats MatchParticipantMetrics) Map() map[string]string {
 	return map[string]string{
 		"assists":         formatInt(stats.Assists),
 		"cs":              formatInt(stats.CS),
@@ -65,7 +62,7 @@ func (stats MatchParticipantStats) Map() map[string]string {
 	}
 }
 
-func (stats MatchParticipantStats) Header() []string {
+func (stats MatchParticipantMetrics) Header() []string {
 	return []string{
 		"assists",
 		"cs",
@@ -89,7 +86,7 @@ func (stats MatchParticipantStats) Header() []string {
 	}
 }
 
-func (stats MatchParticipantStats) Row() []string {
+func (stats MatchParticipantMetrics) Row() []string {
 	return []string{
 		formatInt(stats.Assists),
 		formatInt(stats.CS),
@@ -111,67 +108,4 @@ func (stats MatchParticipantStats) Row() []string {
 		formatInt(stats.WardsPlaced),
 		formatBool(stats.Win),
 	}
-}
-
-func GetStats(match *lol.Match, summoner *lol.Summoner) MatchParticipantStats {
-	teamDamage := make(map[int]int)
-	teamKills := make(map[int]int)
-
-	for _, participant := range match.Info.Participants {
-		teamDamage[participant.TeamID] += participant.TotalDamageDealt
-		teamKills[participant.TeamID] += participant.Kills
-	}
-
-	durationMinutes := float64(match.Info.GameDuration) / 60.0
-
-	for _, participant := range match.Info.Participants {
-		if participant.PUUID == summoner.PUUID {
-			var stats MatchParticipantStats
-
-			stats.Assists = participant.Assists
-			stats.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
-			stats.CSPerMinute = float64(stats.CS) / float64(durationMinutes)
-			stats.ChampionName = participant.ChampionName
-			stats.ControlWardsPlaced = participant.DetectorWardsPlaced
-			stats.DamageDealt = participant.TotalDamageDealt
-			stats.DamageDealtPerMinute = float64(stats.DamageDealt) / float64(durationMinutes)
-			stats.DamageDealtShare = float64(stats.DamageDealt) / float64(teamDamage[participant.TeamID])
-			stats.Deaths = participant.Deaths
-			stats.DurationMinutes = durationMinutes
-			stats.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
-			stats.Kills = participant.Kills
-			stats.Level = participant.ChampLevel
-			stats.MatchType = lookupQueue(Queue(match.Info.QueueID))
-			stats.Position = participant.TeamPosition
-			stats.TurretsTaken = participant.TurretTakedowns
-			stats.WardsKilled = participant.WardsKilled
-			stats.WardsPlaced = participant.WardsPlaced
-			stats.Win = participant.Win
-
-			return stats
-		}
-	}
-
-	// TODO
-	return MatchParticipantStats{}
-}
-
-type Queue int
-
-const (
-	Normal Queue = 400
-	Ranked Queue = 420
-	Clash  Queue = 700
-)
-
-func lookupQueue(queue Queue) string {
-	switch queue {
-	case Normal:
-		return "Normal"
-	case Ranked:
-		return "Ranked"
-	case Clash:
-		return "Clash"
-	}
-	return fmt.Sprintf("TODO: %d", queue)
 }

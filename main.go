@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"lolscout/adapter"
 	"lolscout/data"
 	"os"
 	"time"
@@ -136,7 +137,7 @@ func do(riotId string, startTime time.Time) error {
 		return err
 	}
 
-	queues := []data.Queue{data.Normal, data.Ranked, data.Clash}
+	queues := []lolApi.QueueType{lolApi.Queue.Normal, lolApi.Queue.Ranked, lolApi.Queue.Clash}
 
 	matches, err := client.Get(summoner, queues).Since(startTime)
 	if err != nil {
@@ -147,13 +148,13 @@ func do(riotId string, startTime time.Time) error {
 		return errors.New("summoner has no matches within the timeframe")
 	}
 
-	var stats []data.MatchParticipantStats
+	var metrics []data.MatchParticipantMetrics
 
 	for _, match := range matches {
-		stats = append(stats, data.GetStats(match, summoner))
+		metrics = append(metrics, adapter.GetMetrics(match, summoner))
 	}
 
 	name := fmt.Sprintf("%s.csv", riotId)
 
-	return export.WriteMatches(name, stats)
+	return export.WriteMatches(name, metrics)
 }

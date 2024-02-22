@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"lolscout/data"
 	"net/http"
 	"strings"
 	"time"
@@ -85,10 +84,10 @@ func (c client) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
 type getter struct {
 	api      client
 	summoner *lol.Summoner
-	queues   []data.Queue
+	queues   []QueueType
 }
 
-func (c client) Get(summoner *lol.Summoner, queues []data.Queue) getter {
+func (c client) Get(summoner *lol.Summoner, queues []QueueType) getter {
 	return getter{
 		c,
 		summoner,
