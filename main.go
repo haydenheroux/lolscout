@@ -4,13 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"lolscout/adapter"
-	"lolscout/data"
+	"lolscout/metrics"
 	"os"
 	"time"
 
 	lolApi "lolscout/api/lol"
 	playvsApi "lolscout/api/playvs"
-	"lolscout/export"
 
 	env "github.com/Netflix/go-env"
 	log "github.com/sirupsen/logrus"
@@ -43,28 +42,28 @@ func main() {
 								Name:  "day",
 								Usage: "Get data from the last day of matches",
 								Action: func(c *cli.Context) error {
-									return do(c.Args().First(), time.Now().AddDate(0, 0, -1))
+									return scan(c.Args().First(), time.Now().AddDate(0, 0, -1))
 								},
 							},
 							{
 								Name:  "week",
 								Usage: "Get data from the last week of matches",
 								Action: func(c *cli.Context) error {
-									return do(c.Args().First(), time.Now().AddDate(0, 0, -7))
+									return scan(c.Args().First(), time.Now().AddDate(0, 0, -7))
 								},
 							},
 							{
 								Name:  "month",
 								Usage: "Get data from last month of matches",
 								Action: func(c *cli.Context) error {
-									return do(c.Args().First(), time.Now().AddDate(0, -1, 0))
+									return scan(c.Args().First(), time.Now().AddDate(0, -1, 0))
 								},
 							},
 							{
 								Name:  "year",
 								Usage: "Get data from the last year of matches",
 								Action: func(c *cli.Context) error {
-									return do(c.Args().First(), time.Now().AddDate(-1, 0, 0))
+									return scan(c.Args().First(), time.Now().AddDate(-1, 0, 0))
 								},
 							},
 						},
@@ -129,7 +128,7 @@ func main() {
 	}
 }
 
-func do(riotId string, startTime time.Time) error {
+func scan(riotId string, startTime time.Time) error {
 	client := lolApi.CreateClient(environment.RiotApiKey)
 
 	summoner, err := client.TODO_SummonerByTag_TODO(riotId)
@@ -148,13 +147,17 @@ func do(riotId string, startTime time.Time) error {
 		return errors.New("summoner has no matches within the timeframe")
 	}
 
-	var metrics []data.MatchParticipantMetrics
+	var metrics metrics.MetricsCollection
 
 	for _, match := range matches {
 		metrics = append(metrics, adapter.GetMetrics(match, summoner))
 	}
 
-	name := fmt.Sprintf("%s.csv", riotId)
+	file, err := os.Create(fmt.Sprintf("%s.csv", riotId))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-	return export.WriteMatches(name, metrics)
+	return metrics.CSV(file)
 }

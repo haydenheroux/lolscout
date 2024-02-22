@@ -1,6 +1,8 @@
-package data
+package metrics
 
 import (
+	"encoding/csv"
+	"io"
 	"strconv"
 )
 
@@ -108,4 +110,32 @@ func (stats MatchParticipantMetrics) Row() []string {
 		formatInt(stats.WardsPlaced),
 		formatBool(stats.Win),
 	}
+}
+
+type MetricsCollection []*MatchParticipantMetrics
+
+func (mc MetricsCollection) CSV(w io.Writer) error {
+	writer := csv.NewWriter(w)
+	defer writer.Flush()
+
+	header := false
+
+	for _, metrics := range mc {
+		if !header {
+			err := writer.Write(metrics.Header())
+
+			if err != nil {
+				return err
+			}
+
+			header = true
+		}
+
+		err := writer.Write(metrics.Row())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -2,12 +2,12 @@ package adapter
 
 import (
 	lolApi "lolscout/api/lol"
-	"lolscout/data"
+	"lolscout/metrics"
 
 	"github.com/KnutZuidema/golio/riot/lol"
 )
 
-func GetMetrics(match *lol.Match, summoner *lol.Summoner) data.MatchParticipantMetrics {
+func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchParticipantMetrics {
 	teamDamage := make(map[int]int)
 	teamKills := make(map[int]int)
 
@@ -20,7 +20,7 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) data.MatchParticipantM
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
-			var metrics data.MatchParticipantMetrics
+			var metrics metrics.MatchParticipantMetrics
 
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
@@ -42,10 +42,10 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) data.MatchParticipantM
 			metrics.WardsPlaced = participant.WardsPlaced
 			metrics.Win = participant.Win
 
-			return metrics
+			return &metrics
 		}
 	}
 
 	// TODO
-	return data.MatchParticipantMetrics{}
+	return &metrics.MatchParticipantMetrics{}
 }
