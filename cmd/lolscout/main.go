@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -10,7 +9,8 @@ import (
 	"github.com/haydenheroux/lolscout/internal/adapter"
 	lol "github.com/haydenheroux/lolscout/internal/api/lol"
 	playvs "github.com/haydenheroux/lolscout/internal/api/playvs"
-	"github.com/haydenheroux/lolscout/internal/metrics"
+	"github.com/haydenheroux/lolscout/internal/db"
+	"github.com/haydenheroux/lolscout/internal/model"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -130,10 +130,14 @@ func main() {
 func scan(riotId string, startTime time.Time) error {
 	client := lol.CreateClient(environment.RiotApiKey)
 
+	var player model.Player
+
 	summoner, err := client.TODO_SummonerByTag_TODO(riotId)
 	if err != nil {
 		return err
 	}
+
+	player.PUUID = summoner.PUUID
 
 	queues := []lol.QueueType{lol.Queue.Normal, lol.Queue.Ranked, lol.Queue.Clash}
 
@@ -142,21 +146,22 @@ func scan(riotId string, startTime time.Time) error {
 		return err
 	}
 
+	for _, match := range matches {
+		metrics := adapter.GetMetrics(match, summoner)
+
+		player.MatchMetrics = append(player.MatchMetrics, *metrics)
+	}
+
 	if len(matches) == 0 {
 		return errors.New("summoner has no matches within the timeframe")
 	}
 
-	var metrics metrics.MetricsCollection
-
-	for _, match := range matches {
-		metrics = append(metrics, adapter.GetMetrics(match, summoner))
-	}
-
-	file, err := os.Create(fmt.Sprintf("%s.csv", riotId))
+	dbc, err := db.CreateClient("db.db")
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	defer file.Close()
 
-	return metrics.CSV(file)
+	dbc.CreateOrUpdatePlayer(&player)
+
+	return nil
 }

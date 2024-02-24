@@ -2,11 +2,10 @@ package adapter
 
 import (
 	"github.com/KnutZuidema/golio/riot/lol"
-	"github.com/haydenheroux/lolscout/internal/api/lol"
-	"github.com/haydenheroux/lolscout/internal/metrics"
+	"github.com/haydenheroux/lolscout/internal/model"
 )
 
-func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchMetrics {
+func GetMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
 	teamDamage := make(map[int]int)
 	teamKills := make(map[int]int)
 
@@ -19,7 +18,7 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchMetrics 
 
 	for _, participant := range match.Info.Participants {
 		if participant.PUUID == summoner.PUUID {
-			var metrics metrics.MatchMetrics
+			var metrics model.MatchMetrics
 
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
@@ -35,8 +34,8 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchMetrics 
 			metrics.Kills = participant.Kills
 			metrics.Level = participant.ChampLevel
 			// TODO Refactor to include queue type?
-			metrics.MatchType = api.QueueType(match.Info.QueueID).String()
-			metrics.Position = participant.TeamPosition
+			metrics.MatchType = matchTypeOf(match)
+			metrics.Position = positionOf(participant)
 			metrics.TurretsTaken = participant.TurretTakedowns
 			metrics.WardsKilled = participant.WardsKilled
 			metrics.WardsPlaced = participant.WardsPlaced
@@ -47,5 +46,15 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *metrics.MatchMetrics 
 	}
 
 	// TODO
-	return &metrics.MatchMetrics{}
+	return &model.MatchMetrics{}
+}
+
+// TODO
+func matchTypeOf(match *lol.Match) model.MatchType {
+	return model.SummonersRift
+}
+
+// TODO
+func positionOf(participant *lol.Participant) model.Position {
+	return model.Unknown
 }
