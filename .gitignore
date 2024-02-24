@@ -1,2 +1,2 @@
-lolscout
+./cmd/lolscout/main.go
 *.csv

@@ -1,4 +1,4 @@
-module lolscout
+module github.com/haydenheroux/lolscout
 
 go 1.21.4
 
