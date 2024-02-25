@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	riotApi "github.com/haydenheroux/lolscout/internal/api/riot"
 	"github.com/haydenheroux/lolscout/internal/db"
 	"github.com/haydenheroux/lolscout/internal/model"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -80,40 +80,53 @@ func main() {
 						Name:  "teams",
 						Usage: "Get PlayVS teams",
 						Action: func(c *cli.Context) error {
-							teamIds, err := playvsApi.CreateClient().Get().TeamIDs()
+							riot := riotApi.CreateClient(environment.RiotApiKey)
+							playvs := playvsApi.CreateClient()
+
+							dbc, err := db.CreateClient("db.db")
+							if err != nil {
+								return err
+							}
+
+							teams, err := playvs.GetRegion().Teams()
 
 							if err != nil {
 								return err
 							}
 
-							for _, teamId := range teamIds {
-								println(teamId)
-							}
-
-							return nil
-						},
-					},
-					{
-						Name:  "players",
-						Usage: "Get PlayVS players",
-						Action: func(c *cli.Context) error {
-							playvsClient := playvsApi.CreateClient()
-
-							teamIds, err := playvsClient.Get().TeamIDs()
-
-							if err != nil {
-								return err
-							}
-
-							for _, teamId := range teamIds {
-
-								playerNames, err := playvsClient.Get().Players(teamId)
+							for _, team := range teams {
+								roster, err := playvs.GetRegion().GetTeam(team).Roster()
 								if err != nil {
 									return err
 								}
 
-								for _, playerName := range playerNames {
-									println(teamId, playerName)
+								var accounts []*riotApi.Account
+
+								for _, displayName := range roster.DisplayNames {
+									fields := strings.Split(displayName, "#")
+
+									if len(fields) != 2 {
+										logrus.Errorf("bad riot id format %s", displayName)
+										continue
+									}
+
+									gameName := fields[0]
+									tagLine := fields[1]
+
+									account, err := riot.Get(gameName, tagLine).Account()
+									if err != nil {
+										logrus.Warnf("could not find riot id %s#%s", gameName, tagLine)
+										logrus.Infof("reason: %v", err)
+										continue
+									}
+
+									accounts = append(accounts, account)
+								}
+
+								err = dbc.CreateOrUpdateTeam(adapter.Team(team.ID, team.Name, accounts))
+
+								if err != nil {
+									return err
 								}
 							}
 
@@ -166,7 +179,7 @@ func scan(riotId string, startTime time.Time) error {
 		return err
 	}
 
-	fmt.Printf("got %d matches\n", len(matches))
+	logrus.Infof("got %d matches", len(matches))
 
 	var matchMetrics []*model.MatchMetrics
 
@@ -176,14 +189,14 @@ func scan(riotId string, startTime time.Time) error {
 			continue
 		}
 
-		metrics := adapter.GetMetrics(match, summoner)
+		metrics := adapter.MatchMetrics(match, summoner)
 
 		matchMetrics = append(matchMetrics, metrics)
 
 		player.PlayerMetrics = append(player.PlayerMetrics, *metrics)
 	}
 
-	fmt.Printf("saving %d matches (%d duplicates)\n", len(player.PlayerMetrics), len(matches)-len(player.PlayerMetrics))
+	logrus.Infof("saving %d matches (%d duplicates)", len(player.PlayerMetrics), len(matches)-len(player.PlayerMetrics))
 
 	err = dbc.CreateOrUpdatePlayer(player)
 	if err != nil {

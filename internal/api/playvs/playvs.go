@@ -1,10 +1,7 @@
-package api
+package playvs
 
 import (
-	"bytes"
 	"encoding/json"
-	"io"
-	"net/http"
 	"time"
 )
 
@@ -33,14 +30,14 @@ type getter struct {
 	metaseason metaSeason
 }
 
-func (c client) Get() getter {
+func (c client) GetRegion() getter {
 	return getter{
 		region:     EasternRegion,
 		metaseason: MetaSeason,
 	}
 }
 
-type leagueTeamsStruct struct {
+type getAllLeagueTeamsResult struct {
 	Data struct {
 		GetTeams struct {
 			Teams []struct {
@@ -70,39 +67,17 @@ type leagueTeamsStruct struct {
 	} `json:"extensions"`
 }
 
-func performRequest(method, url string, payload map[string]interface{}) ([]byte, error) {
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, bytes.NewReader(payloadBytes))
-
-	if err != nil {
-		return []byte{}, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	res, err := client.Do(req)
-	if err != nil {
-		return []byte{}, err
-	}
-	defer res.Body.Close()
-
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return body, nil
+type team struct {
+	ID    string
+	Name  string
+	State string
 }
 
 const (
 	playVsEndpoint = "https://api.playvs.com/graphql"
 )
 
-func (g getter) TeamIDs() ([]string, error) {
+func (g getter) Teams() ([]*team, error) {
 	payload := map[string]interface{}{
 		"operationName": "getAllLeagueTeams",
 		"variables": map[string]interface{}{
@@ -112,7 +87,8 @@ func (g getter) TeamIDs() ([]string, error) {
 				"esportSlugs":  []string{"league-of-legends"},
 				"keyword":      "",
 			},
-			"limit":  70,
+			// TODO approximately 75 teams total
+			"limit":  100,
 			"offset": 0,
 		},
 		"extensions": map[string]interface{}{
@@ -125,24 +101,28 @@ func (g getter) TeamIDs() ([]string, error) {
 
 	result, err := performRequest("POST", playVsEndpoint, payload)
 	if err != nil {
-		return []string{}, err
+		return []*team{}, err
 	}
 
-	var leagueTeams leagueTeamsStruct
+	var leagueTeams getAllLeagueTeamsResult
 	if err := json.Unmarshal(result, &leagueTeams); err != nil {
-		return []string{}, err
+		return []*team{}, err
 	}
 
-	var teamIds []string
+	var teams []*team
 
-	for _, team := range leagueTeams.Data.GetTeams.Teams {
-		teamIds = append(teamIds, team.ID)
+	for _, leagueTeam := range leagueTeams.Data.GetTeams.Teams {
+		teams = append(teams, &team{
+			ID:    leagueTeam.ID,
+			Name:  leagueTeam.Name,
+			State: leagueTeam.State,
+		})
 	}
 
-	return teamIds, nil
+	return teams, nil
 }
 
-type teamRosterStruct struct {
+type teamRosterResult struct {
 	Errors []struct {
 		Message   string `json:"message"`
 		Locations []struct {
@@ -368,12 +348,29 @@ type teamRosterStruct struct {
 	} `json:"extensions"`
 }
 
-func (g getter) Players(teamId string) ([]string, error) {
+type teamGetter struct {
+	g    getter
+	team *team
+}
+
+func (g getter) GetTeam(team *team) teamGetter {
+	return teamGetter{
+		g:    g,
+		team: team,
+	}
+}
+
+type teamRoster struct {
+	*team
+	DisplayNames []string
+}
+
+func (tg teamGetter) Roster() (*teamRoster, error) {
 	payload := map[string]interface{}{
 		"operationName": "teamRoster",
 		"variables": map[string]interface{}{
-			"id":                         teamId,
-			"metaseasonId":               g.metaseason,
+			"id":                         tg.team.ID,
+			"metaseasonId":               tg.g.metaseason,
 			"includeSlotExclusionsField": false,
 			"isPublic":                   false,
 			"isCoach":                    false,
@@ -388,20 +385,22 @@ func (g getter) Players(teamId string) ([]string, error) {
 
 	result, err := performRequest("POST", playVsEndpoint, payload)
 	if err != nil {
-		return []string{}, err
+		return &teamRoster{}, err
 	}
 
-	var teamRoster teamRosterStruct
-	if err := json.Unmarshal(result, &teamRoster); err != nil {
-		return []string{}, err
+	var r teamRosterResult
+	if err := json.Unmarshal(result, &r); err != nil {
+		return &teamRoster{}, err
 	}
 
-	var playerNames []string
+	var displayNames []string
 
-	for _, format := range teamRoster.Data.Team.Roster.Formats {
+	for _, format := range r.Data.Team.Roster.Formats {
 		for _, starter := range format.Starters {
 			for _, account := range starter.Player.User.UserProviderAccounts {
-				playerNames = append(playerNames, account.ProviderDisplayName)
+				if account.ProviderName == "Riot" {
+					displayNames = append(displayNames, account.ProviderDisplayName)
+				}
 			}
 		}
 
@@ -413,5 +412,8 @@ func (g getter) Players(teamId string) ([]string, error) {
 		// }
 	}
 
-	return playerNames, nil
+	return &teamRoster{
+		tg.team,
+		displayNames,
+	}, nil
 }

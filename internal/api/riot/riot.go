@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type client struct {
@@ -48,22 +52,48 @@ func (g getter) Account() (*Account, error) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return &Account{}, err
 	}
 
-	if res.StatusCode != 200 {
-		return nil, errors.New("failed to get account by riot id")
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusForbidden {
+			return &Account{}, errors.New("possibly bad riot api key")
+		}
+
+		if res.StatusCode == http.StatusTooManyRequests {
+			retry := res.Header.Get("Retry-After")
+			seconds, err := strconv.Atoi(retry)
+
+			if err != nil {
+				logrus.Debug(err)
+				return nil, err
+			}
+
+			logrus.Infof("rate limited, waiting %d seconds", seconds)
+
+			time.Sleep(time.Duration(seconds) * time.Second)
+
+			return g.Account()
+		}
+
+		if res.StatusCode == http.StatusNotFound {
+			return &Account{}, errors.New("user not found")
+		}
+
+		logrus.Infof("status code %d", res.StatusCode)
+
+		return &Account{}, errors.New("unknown error")
 	}
 
 	contents, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return &Account{}, err
 	}
 
 	var result Account
 
 	if err := json.Unmarshal(contents, &result); err != nil {
-		return nil, err
+		return &Account{}, err
 	}
 
 	return &result, nil

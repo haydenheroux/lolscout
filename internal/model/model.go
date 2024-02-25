@@ -6,16 +6,19 @@ import (
 )
 
 type Team struct {
-	gorm.Model
-	Name    string
-	Players []Player
+	ID        string         `gorm:"primaryKey;column:id"`
+	CreatedAt time.Time      `gorm:"column:created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index;column:deleted_at"`
+	Name      string
+	Players   []Player
 }
 
 type Player struct {
 	PUUID         string `gorm:"primaryKey;column:puuid"`
 	GameName      string `gorm:"column:game_name"`
 	TagLine       string `gorm:"column:tag_line"`
-	TeamID        *uint
+	TeamID        *string
 	CreatedAt     time.Time      `gorm:"column:created_at"`
 	UpdatedAt     time.Time      `gorm:"column:updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index;column:deleted_at"`
@@ -25,7 +28,6 @@ type Player struct {
 type MatchMetrics struct {
 	gorm.Model
 
-	// TODO Determine best method for handling duplicate metrics
 	PUUID   string `gorm:"column:puuid;uniqueIndex:compositeIndex;"`
 	MatchID string `gorm:"column:match_id;uniqueIndex:compositeIndex;"`
 

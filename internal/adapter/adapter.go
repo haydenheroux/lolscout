@@ -6,6 +6,20 @@ import (
 	"github.com/haydenheroux/lolscout/internal/model"
 )
 
+func Team(id, name string, accounts []*riot.Account) *model.Team {
+	var players []model.Player
+
+	for _, account := range accounts {
+		players = append(players, *Player(account))
+	}
+
+	return &model.Team{
+		ID:      id,
+		Name:    name,
+		Players: players,
+	}
+}
+
 func Player(account *riot.Account) *model.Player {
 	return &model.Player{
 		PUUID:    account.PUUID,
@@ -14,7 +28,7 @@ func Player(account *riot.Account) *model.Player {
 	}
 }
 
-func GetMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
+func MatchMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
 	teamDamage := make(map[int]int)
 	teamKills := make(map[int]int)
 
