@@ -11,14 +11,14 @@ type Team struct {
 	UpdatedAt time.Time      `gorm:"column:updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index;column:deleted_at"`
 	Name      string
-	Players   []Player
+	Players   []Player `gorm:"foreignKey:team_id"`
 }
 
 type Player struct {
-	PUUID         string `gorm:"primaryKey;column:puuid"`
-	GameName      string `gorm:"column:game_name"`
-	TagLine       string `gorm:"column:tag_line"`
-	TeamID        *string
+	PUUID         string         `gorm:"primaryKey;column:puuid"`
+	GameName      string         `gorm:"column:game_name"`
+	TagLine       string         `gorm:"column:tag_line"`
+	TeamID        *string        `gorm:"column:team_id"`
 	CreatedAt     time.Time      `gorm:"column:created_at"`
 	UpdatedAt     time.Time      `gorm:"column:updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index;column:deleted_at"`

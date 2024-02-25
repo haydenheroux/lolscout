@@ -33,9 +33,17 @@ func (dbc client) CreateOrUpdateTeam(team *model.Team) error {
 	return dbc.DB.Save(team).Error
 }
 
-func (dbc client) GetTeamByID(id uint) (*model.Team, error) {
+func (dbc client) GetAllTeams() ([]*model.Team, error) {
+	var teams []*model.Team
+	if err := dbc.DB.Find(&teams).Error; err != nil {
+		return nil, err
+	}
+	return teams, nil
+}
+
+func (dbc client) GetTeamByID(id string) (*model.Team, error) {
 	var team model.Team
-	if err := dbc.DB.First(&team, id).Error; err != nil {
+	if err := dbc.DB.Preload("Players").First(&team, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &team, nil

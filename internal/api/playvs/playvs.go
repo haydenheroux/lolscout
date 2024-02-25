@@ -30,9 +30,9 @@ type getter struct {
 	metaseason metaSeason
 }
 
-func (c client) GetRegion() getter {
+func (c client) GetRegion(region region) getter {
 	return getter{
-		region:     EasternRegion,
+		region:     region,
 		metaseason: MetaSeason,
 	}
 }
@@ -349,28 +349,30 @@ type teamRosterResult struct {
 }
 
 type teamGetter struct {
-	g    getter
-	team *team
+	getter getter
+	teamId string
 }
 
-func (g getter) GetTeam(team *team) teamGetter {
+func (g getter) Get(team *team) teamGetter {
 	return teamGetter{
-		g:    g,
-		team: team,
+		getter: g,
+		teamId: team.ID,
 	}
 }
 
-type teamRoster struct {
-	*team
-	DisplayNames []string
+func (g getter) GetTeam(teamId string) teamGetter {
+	return teamGetter{
+		getter: g,
+		teamId: teamId,
+	}
 }
 
-func (tg teamGetter) Roster() (*teamRoster, error) {
+func (tg teamGetter) DisplayNames() ([]string, error) {
 	payload := map[string]interface{}{
 		"operationName": "teamRoster",
 		"variables": map[string]interface{}{
-			"id":                         tg.team.ID,
-			"metaseasonId":               tg.g.metaseason,
+			"id":                         tg.teamId,
+			"metaseasonId":               tg.getter.metaseason,
 			"includeSlotExclusionsField": false,
 			"isPublic":                   false,
 			"isCoach":                    false,
@@ -385,19 +387,20 @@ func (tg teamGetter) Roster() (*teamRoster, error) {
 
 	result, err := performRequest("POST", playVsEndpoint, payload)
 	if err != nil {
-		return &teamRoster{}, err
+		return []string{}, err
 	}
 
-	var r teamRosterResult
-	if err := json.Unmarshal(result, &r); err != nil {
-		return &teamRoster{}, err
+	var roster teamRosterResult
+	if err := json.Unmarshal(result, &roster); err != nil {
+		return []string{}, err
 	}
 
 	var displayNames []string
 
-	for _, format := range r.Data.Team.Roster.Formats {
+	for _, format := range roster.Data.Team.Roster.Formats {
 		for _, starter := range format.Starters {
 			for _, account := range starter.Player.User.UserProviderAccounts {
+				// TODO Move to constant
 				if account.ProviderName == "Riot" {
 					displayNames = append(displayNames, account.ProviderDisplayName)
 				}
@@ -412,8 +415,5 @@ func (tg teamGetter) Roster() (*teamRoster, error) {
 		// }
 	}
 
-	return &teamRoster{
-		tg.team,
-		displayNames,
-	}, nil
+	return displayNames, nil
 }

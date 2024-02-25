@@ -33,7 +33,7 @@ func (c client) SummonerByPUUID(puuid string) (*lol.Summoner, error) {
 }
 
 type getter struct {
-	api      client
+	client   client
 	summoner *lol.Summoner
 	queues   []QueueType
 }
@@ -61,7 +61,7 @@ func (g getter) options() []*lol.MatchListOptions {
 }
 
 func (g getter) Recent(name string) ([]*lol.Match, error) {
-	matchIds, err := g.api.Client.Riot.LoL.Match.List(g.summoner.PUUID, 0, 20)
+	matchIds, err := g.client.Client.Riot.LoL.Match.List(g.summoner.PUUID, 0, 20)
 	if err != nil {
 		return []*lol.Match{}, err
 	}
@@ -69,7 +69,7 @@ func (g getter) Recent(name string) ([]*lol.Match, error) {
 	var matches []*lol.Match
 
 	for _, matchId := range matchIds {
-		match, err := g.api.Client.Riot.LoL.Match.Get(matchId)
+		match, err := g.client.Client.Riot.LoL.Match.Get(matchId)
 		if err != nil {
 			return []*lol.Match{}, err
 		}
@@ -84,12 +84,12 @@ func (g getter) Until(summoner *lol.Summoner, predicate func(*lol.Match) bool) (
 	var matches []*lol.Match
 
 	for _, options := range g.options() {
-		for result := range g.api.Client.Riot.LoL.Match.ListStream(summoner.PUUID, options) {
+		for result := range g.client.Client.Riot.LoL.Match.ListStream(summoner.PUUID, options) {
 			if result.Error != nil {
 				break
 			}
 
-			match, err := g.api.Client.Riot.LoL.Match.Get(result.MatchID)
+			match, err := g.client.Client.Riot.LoL.Match.Get(result.MatchID)
 			if err != nil {
 				break
 			}
@@ -116,12 +116,12 @@ func (g getter) Between(startTime time.Time, endTime time.Time) ([]*lol.Match, e
 		options.StartTime = startTime
 		options.EndTime = endTime
 
-		for result := range g.api.Client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
+		for result := range g.client.Client.Riot.LoL.Match.ListStream(g.summoner.PUUID, options) {
 			if result.Error != nil {
 				break
 			}
 
-			match, err := g.api.Client.Riot.LoL.Match.Get(result.MatchID)
+			match, err := g.client.Client.Riot.LoL.Match.Get(result.MatchID)
 			if err != nil {
 				break
 			}
