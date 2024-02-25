@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"os"
 	"time"
 
@@ -130,14 +129,23 @@ func main() {
 func scan(riotId string, startTime time.Time) error {
 	client := lol.CreateClient(environment.RiotApiKey)
 
-	var player model.Player
-
-	summoner, err := client.TODO_SummonerByTag_TODO(riotId)
+	account, err := client.GetAccountByRiotId(riotId)
 	if err != nil {
 		return err
 	}
 
-	player.PUUID = summoner.PUUID
+	dbc, err := db.CreateClient("db.db")
+	if err != nil {
+		return err
+	}
+
+	player := &model.Player{
+		PUUID:    account.PUUID,
+		GameName: account.GameName,
+		TagLine:  account.TagLine,
+	}
+
+	summoner, err := client.SummonerByPUUID(account.PUUID)
 
 	queues := []lol.QueueType{lol.Queue.Normal, lol.Queue.Ranked, lol.Queue.Clash}
 
@@ -146,22 +154,20 @@ func scan(riotId string, startTime time.Time) error {
 		return err
 	}
 
+	var matchMetrics []*model.MatchMetrics
+
 	for _, match := range matches {
 		metrics := adapter.GetMetrics(match, summoner)
 
-		player.MatchMetrics = append(player.MatchMetrics, *metrics)
+		matchMetrics = append(matchMetrics, metrics)
+
+		player.PlayerMetrics = append(player.PlayerMetrics, *metrics)
 	}
 
-	if len(matches) == 0 {
-		return errors.New("summoner has no matches within the timeframe")
-	}
-
-	dbc, err := db.CreateClient("db.db")
+	err = dbc.CreateOrUpdatePlayer(player)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-
-	dbc.CreateOrUpdatePlayer(&player)
 
 	return nil
 }

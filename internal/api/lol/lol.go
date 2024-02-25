@@ -29,14 +29,13 @@ func CreateClient(apiKey string) client {
 	}
 }
 
-type summonerByTagResult struct {
-	PUUID string `json:"puuid"`
-	Name  string `json:"gameName"`
-	Tag   string `json:"tagLine"`
+type Account struct {
+	PUUID    string `json:"puuid"`
+	GameName string `json:"gameName"`
+	TagLine  string `json:"tagLine"`
 }
 
-// TODO change when golio is updated with PR #60
-func (c client) TODO_SummonerByTag_TODO(riotId string) (*lol.Summoner, error) {
+func (c client) GetAccountByRiotId(riotId string) (*Account, error) {
 	fields := strings.Split(riotId, "#")
 
 	if len(fields) != 2 {
@@ -58,18 +57,22 @@ func (c client) TODO_SummonerByTag_TODO(riotId string) (*lol.Summoner, error) {
 		return nil, err
 	}
 
+	if res.StatusCode != 200 {
+		return nil, errors.New("failed to get account by riot id")
+	}
+
 	contents, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var result summonerByTagResult
+	var result Account
 
 	if err := json.Unmarshal(contents, &result); err != nil {
 		return nil, err
 	}
 
-	return c.SummonerByPUUID(result.PUUID)
+	return &result, nil
 }
 
 func (c client) SummonerByPUUID(puuid string) (*lol.Summoner, error) {

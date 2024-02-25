@@ -20,6 +20,8 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
 		if participant.PUUID == summoner.PUUID {
 			var metrics model.MatchMetrics
 
+			metrics.MatchID = match.Metadata.MatchID
+
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
 			metrics.CSPerMinute = float64(metrics.CS) / float64(durationMinutes)
