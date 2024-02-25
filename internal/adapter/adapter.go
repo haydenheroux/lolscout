@@ -2,8 +2,17 @@ package adapter
 
 import (
 	"github.com/KnutZuidema/golio/riot/lol"
+	riot "github.com/haydenheroux/lolscout/internal/api/riot"
 	"github.com/haydenheroux/lolscout/internal/model"
 )
+
+func Player(account *riot.Account) *model.Player {
+	return &model.Player{
+		PUUID:    account.PUUID,
+		GameName: account.GameName,
+		TagLine:  account.TagLine,
+	}
+}
 
 func GetMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
 	teamDamage := make(map[int]int)
@@ -35,7 +44,6 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
 			metrics.KillParticipation = float64(participant.Kills+participant.Assists) / float64(teamKills[participant.TeamID])
 			metrics.Kills = participant.Kills
 			metrics.Level = participant.ChampLevel
-			// TODO Refactor to include queue type?
 			metrics.MatchType = matchTypeOf(match)
 			metrics.Position = positionOf(participant)
 			metrics.TurretsTaken = participant.TurretTakedowns
@@ -47,7 +55,6 @@ func GetMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics {
 		}
 	}
 
-	// TODO
 	return &model.MatchMetrics{}
 }
 

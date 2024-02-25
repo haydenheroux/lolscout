@@ -52,3 +52,19 @@ func (dbc client) GetPlayerByPUUID(puuid string) (*model.Player, error) {
 	}
 	return &player, nil
 }
+
+func (dbc client) GetMatchIDsForPUUID(puuid string) ([]string, error) {
+	var matchMetrics []model.MatchMetrics
+
+	if err := dbc.DB.Model(&model.MatchMetrics{}).Select("match_id").Where("puuid = ?", puuid).Find(&matchMetrics).Error; err != nil {
+		return nil, err
+	}
+
+	var matchIDs []string
+
+	for _, metric := range matchMetrics {
+		matchIDs = append(matchIDs, metric.MatchID)
+	}
+
+	return matchIDs, nil
+}

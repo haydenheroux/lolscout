@@ -1,12 +1,6 @@
 package api
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-	"net/http"
-	"strings"
 	"time"
 
 	"github.com/KnutZuidema/golio"
@@ -27,52 +21,6 @@ func CreateClient(apiKey string) client {
 			golio.WithRegion(api.RegionNorthAmerica),
 			golio.WithLogger(log.New())),
 	}
-}
-
-type Account struct {
-	PUUID    string `json:"puuid"`
-	GameName string `json:"gameName"`
-	TagLine  string `json:"tagLine"`
-}
-
-func (c client) GetAccountByRiotId(riotId string) (*Account, error) {
-	fields := strings.Split(riotId, "#")
-
-	if len(fields) != 2 {
-		return nil, errors.New("incorrect number of fields for Riot ID")
-	}
-
-	name := fields[0]
-	tag := fields[1]
-
-	url := fmt.Sprintf("https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%s/%s", name, tag)
-
-	client := &http.Client{}
-
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("X-Riot-Token", c.APIKey)
-
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode != 200 {
-		return nil, errors.New("failed to get account by riot id")
-	}
-
-	contents, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var result Account
-
-	if err := json.Unmarshal(contents, &result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
 }
 
 func (c client) SummonerByPUUID(puuid string) (*lol.Summoner, error) {

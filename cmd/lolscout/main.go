@@ -1,13 +1,17 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	env "github.com/Netflix/go-env"
 	"github.com/haydenheroux/lolscout/internal/adapter"
-	lol "github.com/haydenheroux/lolscout/internal/api/lol"
-	playvs "github.com/haydenheroux/lolscout/internal/api/playvs"
+	lolApi "github.com/haydenheroux/lolscout/internal/api/lol"
+	playvsApi "github.com/haydenheroux/lolscout/internal/api/playvs"
+	riotApi "github.com/haydenheroux/lolscout/internal/api/riot"
 	"github.com/haydenheroux/lolscout/internal/db"
 	"github.com/haydenheroux/lolscout/internal/model"
 	log "github.com/sirupsen/logrus"
@@ -76,7 +80,7 @@ func main() {
 						Name:  "teams",
 						Usage: "Get PlayVS teams",
 						Action: func(c *cli.Context) error {
-							teamIds, err := playvs.CreateClient().Get().TeamIDs()
+							teamIds, err := playvsApi.CreateClient().Get().TeamIDs()
 
 							if err != nil {
 								return err
@@ -93,7 +97,7 @@ func main() {
 						Name:  "players",
 						Usage: "Get PlayVS players",
 						Action: func(c *cli.Context) error {
-							playvsClient := playvs.CreateClient()
+							playvsClient := playvsApi.CreateClient()
 
 							teamIds, err := playvsClient.Get().TeamIDs()
 
@@ -127,9 +131,19 @@ func main() {
 }
 
 func scan(riotId string, startTime time.Time) error {
-	client := lol.CreateClient(environment.RiotApiKey)
+	riot := riotApi.CreateClient(environment.RiotApiKey)
+	lol := lolApi.CreateClient(environment.RiotApiKey)
 
-	account, err := client.GetAccountByRiotId(riotId)
+	fields := strings.Split(riotId, "#")
+
+	if len(fields) != 2 {
+		return errors.New("bad riot id")
+	}
+
+	gameName := fields[0]
+	tagLine := fields[1]
+
+	account, err := riot.Get(gameName, tagLine).Account()
 	if err != nil {
 		return err
 	}
@@ -139,24 +153,29 @@ func scan(riotId string, startTime time.Time) error {
 		return err
 	}
 
-	player := &model.Player{
-		PUUID:    account.PUUID,
-		GameName: account.GameName,
-		TagLine:  account.TagLine,
-	}
+	player := adapter.Player(account)
 
-	summoner, err := client.SummonerByPUUID(account.PUUID)
+	playerMatchIds, err := dbc.GetMatchIDsForPUUID(player.PUUID)
 
-	queues := []lol.QueueType{lol.Queue.Normal, lol.Queue.Ranked, lol.Queue.Clash}
+	summoner, err := lol.SummonerByPUUID(player.PUUID)
 
-	matches, err := client.Get(summoner, queues).Since(startTime)
+	queues := []lolApi.QueueType{lolApi.Queue.Normal, lolApi.Queue.Ranked, lolApi.Queue.Clash}
+
+	matches, err := lol.Get(summoner, queues).Since(startTime)
 	if err != nil {
 		return err
 	}
 
+	fmt.Printf("got %d matches\n", len(matches))
+
 	var matchMetrics []*model.MatchMetrics
 
 	for _, match := range matches {
+		// Skip don't append if already stored
+		if contains(playerMatchIds, match.Metadata.MatchID) {
+			continue
+		}
+
 		metrics := adapter.GetMetrics(match, summoner)
 
 		matchMetrics = append(matchMetrics, metrics)
@@ -164,10 +183,21 @@ func scan(riotId string, startTime time.Time) error {
 		player.PlayerMetrics = append(player.PlayerMetrics, *metrics)
 	}
 
+	fmt.Printf("saving %d matches (%d duplicates)\n", len(player.PlayerMetrics), len(matches)-len(player.PlayerMetrics))
+
 	err = dbc.CreateOrUpdatePlayer(player)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
