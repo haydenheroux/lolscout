@@ -13,6 +13,7 @@ import (
 	riotApi "github.com/haydenheroux/lolscout/internal/api/riot"
 	"github.com/haydenheroux/lolscout/internal/db"
 	"github.com/haydenheroux/lolscout/internal/model"
+	"github.com/montanaflynn/stats"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -41,6 +42,74 @@ func createCLIApp() *cli.App {
 		Commands: []*cli.Command{
 			createLOLCommand(),
 			createPlayVSCommand(),
+			{
+				Name: "analyze",
+				Action: func(c *cli.Context) error {
+					riotId := c.Args().First()
+
+					riot := riotApi.CreateClient(environment.RiotApiKey)
+
+					name, tag, err := riotApi.Split(riotId)
+					if err != nil {
+						return err
+					}
+
+					account, err := riot.Get(name, tag).Account()
+					if err != nil {
+						return err
+					}
+
+					dbc, err := db.CreateClient(environment.DatabaseName)
+					if err != nil {
+						return err
+					}
+
+					player, err := dbc.GetPlayerByPUUID(account.PUUID)
+					if err != nil {
+						return err
+					}
+
+					positionCounts := make(map[model.Position]int)
+
+					for _, metrics := range player.PlayerMetrics {
+						if _, exists := positionCounts[metrics.Position]; !exists {
+							positionCounts[metrics.Position] = 1
+						}
+
+						positionCounts[metrics.Position] += 1
+					}
+
+					var mostFrequentPosition model.Position
+					maxCount := 0
+					for pos, count := range positionCounts {
+						if count > maxCount {
+							mostFrequentPosition = pos
+							maxCount = count
+						}
+					}
+
+					fmt.Println(mostFrequentPosition)
+
+					var cs []float64
+
+					for _, metrics := range player.PlayerMetrics {
+						if metrics.Position != mostFrequentPosition {
+							continue
+						}
+
+						cs = append(cs, metrics.CSPerMinute)
+					}
+
+					data := stats.LoadRawData(cs)
+
+					mean, _ := stats.Mean(data)
+					stdDev, _ := stats.StandardDeviationSample(data)
+
+					fmt.Printf("%f %f\n", mean, stdDev)
+
+					return nil
+				},
+			},
 		},
 	}
 	return app
