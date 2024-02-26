@@ -77,7 +77,19 @@ func matchTypeOf(match *lol.Match) model.MatchType {
 	return model.SummonersRift
 }
 
-// TODO
 func positionOf(participant *lol.Participant) model.Position {
+	switch participant.TeamPosition {
+	case "TOP":
+		return model.RoleTop
+	case "JUNGLE":
+		return model.RoleJungle
+	case "MIDDLE":
+		return model.RoleMiddle
+	case "BOTTOM":
+		return model.RoleBottom
+	case "UTILITY":
+		return model.RoleSupport
+	}
+
 	return model.Unknown
 }

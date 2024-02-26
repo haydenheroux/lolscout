@@ -54,12 +54,12 @@ func createLOLCommand() *cli.Command {
 		Subcommands: []*cli.Command{
 			{
 				Name:  "scan",
-				Usage: "Scan recent matches",
+				Usage: "scan recent matches",
 				Subcommands: []*cli.Command{
-					createLOLScanCommand("day", "Scan the last day of matches", 1),
-					createLOLScanCommand("week", "Scan the last week of matches", 7),
-					createLOLScanCommand("month", "Scan the last month of matches", 30),
-					createLOLScanCommand("year", "Scan the last year of matches", 365),
+					createLOLScanCommand("day", "scan the last day of matches", 1),
+					createLOLScanCommand("week", "scan the last week of matches", 7),
+					createLOLScanCommand("month", "scan the last month of matches", 30),
+					createLOLScanCommand("year", "scan the last year of matches", 365),
 				},
 			},
 		},
@@ -82,95 +82,100 @@ func createPlayVSCommand() *cli.Command {
 		Usage: "PlayVS",
 		Subcommands: []*cli.Command{
 			{
-				Name:  "teams",
-				Usage: "PlayVS teams",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "init",
-						Usage: "Initialize teams and players",
-						Action: func(c *cli.Context) error {
-							return initializePlayVSTeams()
-						},
-					},
-					{
-						Name:  "list",
-						Usage: "List teams",
-						Action: func(c *cli.Context) error {
-							dbc, err := db.CreateClient(environment.DatabaseName)
-							if err != nil {
-								return err
-							}
+				Name:  "info",
+				Usage: "display information for a team",
+				Action: func(c *cli.Context) error {
+					dbc, err := db.CreateClient(environment.DatabaseName)
+					if err != nil {
+						return err
+					}
 
-							teams, err := dbc.GetAllTeams()
+					team, err := dbc.GetTeamByID(c.Args().First())
 
-							for _, team := range teams {
-								fmt.Printf("%s: %s\n", team.Name, team.ID)
-							}
+					if err != nil {
+						return err
+					}
 
-							return nil
-						},
-					},
+					fmt.Printf("%s: %s\n", team.Name, team.ID)
+					fmt.Printf("has %d players\n", len(team.Players))
+
+					for _, player := range team.Players {
+						fmt.Printf("%s#%s\n", player.GameName, player.TagLine)
+					}
+
+					return nil
 				},
 			},
 			{
-				Name:  "team",
-				Usage: "PlayVS team",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "info",
-						Usage: "Show team information",
-						Action: func(c *cli.Context) error {
-							dbc, err := db.CreateClient(environment.DatabaseName)
-							if err != nil {
-								return err
-							}
-
-							team, err := dbc.GetTeamByID(c.Args().First())
-
-							if err != nil {
-								return err
-							}
-
-							fmt.Printf("%s: %s\n", team.Name, team.ID)
-
-							for _, player := range team.Players {
-								fmt.Printf("%s#%s\n", player.GameName, player.TagLine)
-							}
-
-							return nil
-						},
-					},
-					{
-						Name:  "scan",
-						Usage: "Show team information",
-						Action: func(c *cli.Context) error {
-							dbc, err := db.CreateClient(environment.DatabaseName)
-							if err != nil {
-								return err
-							}
-
-							team, err := dbc.GetTeamByID(c.Args().First())
-
-							if err != nil {
-								return err
-							}
-
-							for _, player := range team.Players {
-								// TODO Add variants for other time ranges
-								monthAgo := time.Now().AddDate(0, 0, -30)
-
-								err := scanLeagueOfLegendsMatches(player.GameName, player.TagLine, monthAgo)
-
-								if err != nil {
-									return err
-								}
-							}
-
-							return nil
-						},
-					},
+				Name:  "init",
+				Usage: "initialize teams and players",
+				Action: func(c *cli.Context) error {
+					return initializePlayVSTeams()
 				},
 			},
+			{
+				Name:  "list",
+				Usage: "list all teams",
+				Action: func(c *cli.Context) error {
+					dbc, err := db.CreateClient(environment.DatabaseName)
+					if err != nil {
+						return err
+					}
+
+					teams, err := dbc.GetAllTeams()
+
+					for _, team := range teams {
+						fmt.Printf("%s: %s\n", team.Name, team.ID)
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "scan",
+				Usage: "scan matches for a team",
+				Subcommands: []*cli.Command{
+					createPlayVSScanCommand("day", "scan the last day of matches", 1),
+					createPlayVSScanCommand("week", "scan the last week of matches", 7),
+					createPlayVSScanCommand("month", "scan the last month of matches", 30),
+					createPlayVSScanCommand("year", "scan the last year of matches", 365),
+				},
+			},
+		},
+	}
+}
+
+func createPlayVSScanCommand(name, usage string, daysAgo int) *cli.Command {
+	return &cli.Command{
+		Name:  name,
+		Usage: usage,
+		Action: func(c *cli.Context) error {
+			dbc, err := db.CreateClient(environment.DatabaseName)
+			if err != nil {
+				return err
+			}
+
+			teamId := c.Args().First()
+
+			if len(teamId) == 0 {
+				return errors.New("team id not specified")
+			}
+
+			team, err := dbc.GetTeamByID(teamId)
+
+			if err != nil {
+				return err
+			}
+
+			for _, player := range team.Players {
+				err := scanLeagueOfLegendsMatches(player.GameName, player.TagLine, time.Now().AddDate(0, 0, -daysAgo))
+
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
 		},
 	}
 }
@@ -202,11 +207,17 @@ func scanLeagueOfLegendsMatches(gameName, tagLine string, startTime time.Time) e
 		return err
 	}
 
-	player := adapter.Player(account)
+	puuid := account.PUUID
 
-	playerMatchIds, err := dbc.GetMatchIDsForPUUID(player.PUUID)
+	player, err := dbc.GetPlayerByPUUID(puuid)
+	if err != nil {
+		return err
+	}
 
-	summoner, err := lol.SummonerByPUUID(player.PUUID)
+	summoner, err := lol.SummonerByPUUID(puuid)
+	if err != nil {
+		return err
+	}
 
 	queues := []lolApi.QueueType{lolApi.Queue.Normal, lolApi.Queue.Ranked, lolApi.Queue.Clash}
 
@@ -220,18 +231,15 @@ func scanLeagueOfLegendsMatches(gameName, tagLine string, startTime time.Time) e
 	var matchMetrics []*model.MatchMetrics
 
 	for _, match := range matches {
-		if contains(playerMatchIds, match.Metadata.MatchID) {
-			continue
-		}
-
 		metrics := adapter.MatchMetrics(match, summoner)
 
 		matchMetrics = append(matchMetrics, metrics)
-
-		player.PlayerMetrics = append(player.PlayerMetrics, *metrics)
 	}
 
-	log.Infof("saving %d matches (%d duplicates)", len(player.PlayerMetrics), len(matches)-len(player.PlayerMetrics))
+	scanned := len(matchMetrics)
+	appended := player.AppendMatchMetrics(matchMetrics)
+
+	log.Infof("saving %d matches (%d duplicates)", appended, scanned-appended)
 
 	err = dbc.CreateOrUpdatePlayer(player)
 	if err != nil {
@@ -239,15 +247,6 @@ func scanLeagueOfLegendsMatches(gameName, tagLine string, startTime time.Time) e
 	}
 
 	return nil
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 
 func initializePlayVSTeams() error {

@@ -25,6 +25,39 @@ type Player struct {
 	PlayerMetrics []MatchMetrics `gorm:"foreignKey:puuid"`
 }
 
+func (p *Player) AppendMatchMetrics(matchMetrics []*MatchMetrics) int {
+	count := 0
+
+	for _, metrics := range matchMetrics {
+		skip := false
+
+		for _, existing := range p.PlayerMetrics {
+			if metrics.MatchID == existing.MatchID {
+				skip = true
+				break
+			}
+		}
+
+		if skip {
+			continue
+		}
+
+		p.PlayerMetrics = append(p.PlayerMetrics, *metrics)
+		count += 1
+	}
+
+	return count
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 type MatchMetrics struct {
 	gorm.Model
 
@@ -62,9 +95,9 @@ type Position int
 
 const (
 	Unknown Position = iota
-	Top
-	Jungle
-	Middle
-	Bottom
-	Support
+	RoleTop
+	RoleJungle
+	RoleMiddle
+	RoleBottom
+	RoleSupport
 )
