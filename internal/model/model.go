@@ -61,8 +61,11 @@ func contains(s []string, e string) bool {
 type MatchMetrics struct {
 	gorm.Model
 
-	PUUID   string `gorm:"column:puuid;uniqueIndex:compositeIndex;"`
+	PUUID string `gorm:"column:puuid;uniqueIndex:compositeIndex;"`
+
 	MatchID string `gorm:"column:match_id;uniqueIndex:compositeIndex;"`
+
+	StartTime time.Time
 
 	Assists              int
 	CS                   int

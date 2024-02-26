@@ -1,6 +1,8 @@
 package adapter
 
 import (
+	"time"
+
 	"github.com/KnutZuidema/golio/riot/lol"
 	riot "github.com/haydenheroux/lolscout/internal/api/riot"
 	"github.com/haydenheroux/lolscout/internal/model"
@@ -44,6 +46,8 @@ func MatchMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics 
 			var metrics model.MatchMetrics
 
 			metrics.MatchID = match.Metadata.MatchID
+
+			metrics.StartTime = time.UnixMilli(match.Info.GameStartTimestamp)
 
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
