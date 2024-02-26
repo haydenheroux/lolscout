@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	env "github.com/Netflix/go-env"
@@ -100,7 +99,7 @@ func createPlayVSCommand() *cli.Command {
 					fmt.Printf("has %d players\n", len(team.Players))
 
 					for _, player := range team.Players {
-						fmt.Printf("%s#%s\n", player.GameName, player.TagLine)
+						fmt.Printf("%s\n", riotApi.Join(player.GameName, player.TagLine))
 					}
 
 					return nil
@@ -181,14 +180,11 @@ func createPlayVSScanCommand(name, usage string, daysAgo int) *cli.Command {
 }
 
 func scanLeagueOfLegendsMatchesRiotId(riotId string, startTime time.Time) error {
-	fields := strings.Split(riotId, "#")
+	gameName, tagLine, err := riotApi.Split(riotId)
 
-	if len(fields) != 2 {
-		return errors.New("bad riot id")
+	if err != nil {
+		return err
 	}
-
-	gameName := fields[0]
-	tagLine := fields[1]
 
 	return scanLeagueOfLegendsMatches(gameName, tagLine, startTime)
 }
@@ -275,19 +271,16 @@ func initializePlayVSTeams() error {
 		var accounts []*riotApi.Account
 
 		for _, displayName := range displayNames {
-			fields := strings.Split(displayName, "#")
+			gameName, tagLine, err := riotApi.Split(displayName)
 
-			if len(fields) != 2 {
-				log.Errorf("bad riot id format %s", displayName)
+			if err != nil {
+				log.Warnf("%v %s", err, displayName)
 				continue
 			}
 
-			gameName := fields[0]
-			tagLine := fields[1]
-
 			account, err := riot.Get(gameName, tagLine).Account()
 			if err != nil {
-				log.Warnf("could not find riot id %s#%s", gameName, tagLine)
+				log.Warnf("could not find riot id %s", displayName)
 				log.Infof("reason: %v", err)
 				continue
 			}
