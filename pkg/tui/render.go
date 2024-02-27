@@ -2,13 +2,13 @@ package tui
 
 import (
 	"fmt"
-	"lolscout/data"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/haydenheroux/lolscout/pkg/model"
 )
 
-type MatchParticipantModel struct {
-	data.MatchParticipantMetrics
+type MatchMetricsModel struct {
+	Metrics model.MatchMetrics
 }
 
 type theme struct {
@@ -17,8 +17,8 @@ type theme struct {
 	gap        int
 }
 
-func (mp MatchParticipantModel) theme() theme {
-	if mp.Win {
+func (mp MatchMetricsModel) theme() theme {
+	if mp.Metrics.Win {
 		return theme{
 			background: blueBackgroundColor,
 			border:     blueBorderColor,
@@ -33,16 +33,16 @@ func (mp MatchParticipantModel) theme() theme {
 	}
 }
 
-func (mp MatchParticipantModel) infoSectionView() string {
+func (mp MatchMetricsModel) infoSectionView() string {
 	background := mp.theme().background
 
-	durationString := fmt.Sprintf("%dm", int(mp.DurationMinutes))
+	durationString := fmt.Sprintf("%dm", int(mp.Metrics.DurationMinutes))
 
 	minWidth := 10
-	width := max(len(mp.MatchType), len(durationString), minWidth)
+	width := max(len(mp.Metrics.MatchType.String()), len(durationString), minWidth)
 
 	matchType := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
-	renderedMatchType := matchType.Render(mp.MatchType)
+	renderedMatchType := matchType.Render(mp.Metrics.MatchType.String())
 
 	duration := lipgloss.NewStyle().Background(background).Width(width)
 	renderedDuration := duration.Render(durationString)
@@ -50,17 +50,17 @@ func (mp MatchParticipantModel) infoSectionView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedMatchType, renderedDuration)
 }
 
-func (mp MatchParticipantModel) championView() string {
+func (mp MatchMetricsModel) championView() string {
 	background := mp.theme().background
 
-	levelString := fmt.Sprintf("Lvl. %d", mp.Level)
+	levelString := fmt.Sprintf("Lvl. %d", mp.Metrics.Level)
 
 	minWidth := 10
-	width := max(len(levelString), len(mp.ChampionName), minWidth)
+	width := max(len(levelString), len(mp.Metrics.ChampionName), minWidth)
 
 	championName := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
 
-	renderedChampionName := championName.Render(mp.ChampionName)
+	renderedChampionName := championName.Render(mp.Metrics.ChampionName)
 
 	level := lipgloss.NewStyle().Background(background).Width(width)
 
@@ -69,30 +69,32 @@ func (mp MatchParticipantModel) championView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedChampionName, renderedLevel)
 }
 
-func (mp MatchParticipantModel) kdaView() string {
+func (mp MatchMetricsModel) kdaView() string {
 	background := mp.theme().background
 
-	kdRatio := float64(mp.Kills + mp.Assists)
+	kdRatio := float64(mp.Metrics.Kills + mp.Metrics.Assists)
 
-	if mp.Deaths > 0 {
-		kdRatio /= float64(mp.Deaths)
+	if mp.Metrics.Deaths > 0 {
+		kdRatio /= float64(mp.Metrics.Deaths)
 	}
 
 	whiteKda := lipgloss.NewStyle().Background(background)
 
-	goldKda := whiteKda.Copy().Foreground(goldColor)
-	blueKda := goldKda.Copy().Foreground(blueColor)
-	greenKda := goldKda.Copy().Foreground(greenColor)
+	// TODO
+	// goldKda := whiteKda.Copy().Foreground(goldColor)
+	// blueKda := goldKda.Copy().Foreground(blueColor)
+	// greenKda := goldKda.Copy().Foreground(greenColor)
 
 	kdaTextStyle := whiteKda
 
-	if kdRatio >= data.GOLD_KDA {
-		kdaTextStyle = goldKda
-	} else if kdRatio >= data.BLUE_KDA {
-		kdaTextStyle = blueKda
-	} else if kdRatio >= data.GREEN_KDA {
-		kdaTextStyle = greenKda
-	}
+	// TODO
+	// if kdRatio >= data.GOLD_KDA {
+	// 	kdaTextStyle = goldKda
+	// } else if kdRatio >= data.BLUE_KDA {
+	// 	kdaTextStyle = blueKda
+	// } else if kdRatio >= data.GREEN_KDA {
+	// 	kdaTextStyle = greenKda
+	// }
 
 	kdaTextStyle = kdaTextStyle.PaddingRight(1)
 
@@ -100,20 +102,21 @@ func (mp MatchParticipantModel) kdaView() string {
 
 	renderedKdaText := kdaTextStyle.Render(kdaText)
 
-	killParticipationString := fmt.Sprintf("(%.0f%% KP)", mp.KillParticipation*100)
+	killParticipationString := fmt.Sprintf("(%.0f%% KP)", mp.Metrics.KillParticipation*100)
 
 	killParticipation := lipgloss.NewStyle().Background(background)
 
-	if mp.KillParticipation >= data.KILL_PARTICIPATION {
-		killParticipation = killParticipation.Foreground(redColor)
-	}
+	// TODO
+	// if mp.KillParticipation >= data.KILL_PARTICIPATION {
+	// 	killParticipation = killParticipation.Foreground(redColor)
+	// }
 
 	renderedKillParticipation := killParticipation.Render(killParticipationString)
 
 	// TODO Take width into account
 	renderedKdaBottomSection := lipgloss.JoinHorizontal(lipgloss.Bottom, renderedKdaText, renderedKillParticipation)
 
-	kdaString := fmt.Sprintf("%d/%d/%d", mp.Kills, mp.Deaths, mp.Assists)
+	kdaString := fmt.Sprintf("%d/%d/%d", mp.Metrics.Kills, mp.Metrics.Deaths, mp.Metrics.Assists)
 
 	minWidth := 24
 	width := max(len(kdaString), lipgloss.Width(renderedKdaBottomSection), minWidth)
@@ -130,18 +133,19 @@ func (mp MatchParticipantModel) kdaView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedKda, rerenderedKdaBottomSection)
 }
 
-func (mp MatchParticipantModel) creepScoreView() string {
+func (mp MatchMetricsModel) creepScoreView() string {
 	background := mp.theme().background
 
-	csString := fmt.Sprintf("%d CS", mp.CS)
+	csString := fmt.Sprintf("%d CS", mp.Metrics.CS)
 
-	csPerMinuteString := fmt.Sprintf("%.1f/m", mp.CSPerMinute)
+	csPerMinuteString := fmt.Sprintf("%.1f/m", mp.Metrics.CSPerMinute)
 
 	csPerMinute := lipgloss.NewStyle().Background(background)
 
-	if mp.CSPerMinute >= data.CS_PER_MINUTE {
-		csPerMinute = csPerMinute.Foreground(redColor)
-	}
+	// TODO
+	// if mp.CSPerMinute >= data.CS_PER_MINUTE {
+	// 	csPerMinute = csPerMinute.Foreground(redColor)
+	// }
 
 	renderedCsPerMinute := csPerMinute.Render(csPerMinuteString)
 
@@ -159,7 +163,7 @@ func (mp MatchParticipantModel) creepScoreView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedCs, rerenderedCsPerMinute)
 }
 
-func (mp MatchParticipantModel) View() string {
+func (mp MatchMetricsModel) View() string {
 	theme := mp.theme()
 	background := theme.background
 	border := theme.border

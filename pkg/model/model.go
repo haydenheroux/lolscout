@@ -91,8 +91,17 @@ type MatchMetrics struct {
 type MatchType int
 
 const (
-	SummonersRift MatchType = iota
+	MatchTypeSummonersRift MatchType = iota
 )
+
+func (mt MatchType) String() string {
+	switch mt {
+	case MatchTypeSummonersRift:
+		return "Summoner's Rift"
+	default:
+		return ""
+	}
+}
 
 type Position int
 
@@ -104,3 +113,22 @@ const (
 	RoleBottom
 	RoleSupport
 )
+
+func (p Position) String() string {
+	switch p {
+	case Unknown:
+		return "Unknown"
+	case RoleTop:
+		return "Top"
+	case RoleJungle:
+		return "Jungle"
+	case RoleMiddle:
+		return "Middle"
+	case RoleBottom:
+		return "Bottom"
+	case RoleSupport:
+		return "Support"
+	default:
+		return ""
+	}
+}

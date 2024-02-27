@@ -7,13 +7,13 @@ import (
 	"time"
 
 	env "github.com/Netflix/go-env"
-	"github.com/haydenheroux/lolscout/internal/adapter"
-	lolApi "github.com/haydenheroux/lolscout/internal/api/lol"
-	playvsApi "github.com/haydenheroux/lolscout/internal/api/playvs"
-	riotApi "github.com/haydenheroux/lolscout/internal/api/riot"
-	"github.com/haydenheroux/lolscout/internal/db"
-	"github.com/haydenheroux/lolscout/internal/model"
-	"github.com/montanaflynn/stats"
+	"github.com/haydenheroux/lolscout/pkg/adapter"
+	"github.com/haydenheroux/lolscout/pkg/analytics"
+	lolApi "github.com/haydenheroux/lolscout/pkg/api/lol"
+	playvsApi "github.com/haydenheroux/lolscout/pkg/api/playvs"
+	riotApi "github.com/haydenheroux/lolscout/pkg/api/riot"
+	"github.com/haydenheroux/lolscout/pkg/db"
+	"github.com/haydenheroux/lolscout/pkg/model"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -42,74 +42,6 @@ func createCLIApp() *cli.App {
 		Commands: []*cli.Command{
 			createLOLCommand(),
 			createPlayVSCommand(),
-			{
-				Name: "analyze",
-				Action: func(c *cli.Context) error {
-					riotId := c.Args().First()
-
-					riot := riotApi.CreateClient(environment.RiotApiKey)
-
-					name, tag, err := riotApi.Split(riotId)
-					if err != nil {
-						return err
-					}
-
-					account, err := riot.Get(name, tag).Account()
-					if err != nil {
-						return err
-					}
-
-					dbc, err := db.CreateClient(environment.DatabaseName)
-					if err != nil {
-						return err
-					}
-
-					player, err := dbc.GetPlayerByPUUID(account.PUUID)
-					if err != nil {
-						return err
-					}
-
-					positionCounts := make(map[model.Position]int)
-
-					for _, metrics := range player.PlayerMetrics {
-						if _, exists := positionCounts[metrics.Position]; !exists {
-							positionCounts[metrics.Position] = 1
-						}
-
-						positionCounts[metrics.Position] += 1
-					}
-
-					var mostFrequentPosition model.Position
-					maxCount := 0
-					for pos, count := range positionCounts {
-						if count > maxCount {
-							mostFrequentPosition = pos
-							maxCount = count
-						}
-					}
-
-					fmt.Println(mostFrequentPosition)
-
-					var cs []float64
-
-					for _, metrics := range player.PlayerMetrics {
-						if metrics.Position != mostFrequentPosition {
-							continue
-						}
-
-						cs = append(cs, metrics.CSPerMinute)
-					}
-
-					data := stats.LoadRawData(cs)
-
-					mean, _ := stats.Mean(data)
-					stdDev, _ := stats.StandardDeviationSample(data)
-
-					fmt.Printf("%f %f\n", mean, stdDev)
-
-					return nil
-				},
-			},
 		},
 	}
 	return app
@@ -120,6 +52,13 @@ func createLOLCommand() *cli.Command {
 		Name:  "lol",
 		Usage: "League of Legends",
 		Subcommands: []*cli.Command{
+			{
+				Name: "analyze",
+				Action: func(c *cli.Context) error {
+					riotId := c.Args().First()
+					return analyzePlayer(riotId)
+				},
+			},
 			{
 				Name:  "scan",
 				Usage: "scan recent matches",
@@ -149,6 +88,38 @@ func createPlayVSCommand() *cli.Command {
 		Name:  "playvs",
 		Usage: "PlayVS",
 		Subcommands: []*cli.Command{
+			{
+				Name:  "analyze",
+				Usage: "analyze a team's players",
+				Action: func(c *cli.Context) error {
+					dbc, err := db.CreateClient(environment.DatabaseName)
+					if err != nil {
+						return err
+					}
+
+					if c.Args().Len() != 1 {
+						return errors.New("incorrect arguments")
+					}
+
+					team, err := dbc.GetTeamByID(c.Args().First())
+
+					if err != nil {
+						return err
+					}
+
+					for _, player := range team.Players {
+						riotId := riotApi.Join(player.GameName, player.TagLine)
+
+						fmt.Println(riotId)
+
+						analyzePlayer(riotId)
+
+						fmt.Println("\n", "\n", "\n")
+					}
+
+					return nil
+				},
+			},
 			{
 				Name:  "info",
 				Usage: "display information for a team",
@@ -361,6 +332,60 @@ func initializePlayVSTeams() error {
 
 		if err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func analyzePlayer(riotId string) error {
+	riot := riotApi.CreateClient(environment.RiotApiKey)
+
+	name, tag, err := riotApi.Split(riotId)
+	if err != nil {
+		return err
+	}
+
+	account, err := riot.Get(name, tag).Account()
+	if err != nil {
+		return err
+	}
+
+	dbc, err := db.CreateClient(environment.DatabaseName)
+	if err != nil {
+		return err
+	}
+
+	player, err := dbc.GetPlayerByPUUID(account.PUUID)
+	if err != nil {
+		return err
+	}
+
+	var s14PlayerMetrics []model.MatchMetrics
+
+	s14Start := time.Date(2024, time.January, 10, 0, 0, 0, 0, time.UTC)
+
+	for _, metrics := range player.PlayerMetrics {
+		if metrics.StartTime.After(s14Start) {
+			s14PlayerMetrics = append(s14PlayerMetrics, metrics)
+		}
+	}
+
+	analyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
+
+	for position, analytics := range analyticsByPosition {
+		if analytics.Size > 2 {
+			fmt.Println(position)
+			fmt.Println(analytics)
+		}
+	}
+
+	analyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
+
+	for champion, analytics := range analyticsByChampion {
+		if analytics.Size > 2 {
+			fmt.Println(champion)
+			fmt.Println(analytics)
 		}
 	}
 

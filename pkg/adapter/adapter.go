@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/KnutZuidema/golio/riot/lol"
-	riot "github.com/haydenheroux/lolscout/internal/api/riot"
-	"github.com/haydenheroux/lolscout/internal/model"
+	riot "github.com/haydenheroux/lolscout/pkg/api/riot"
+	"github.com/haydenheroux/lolscout/pkg/model"
 )
 
 func Team(id, name string, accounts []*riot.Account) *model.Team {
@@ -78,7 +78,7 @@ func MatchMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics 
 
 // TODO
 func matchTypeOf(match *lol.Match) model.MatchType {
-	return model.SummonersRift
+	return model.MatchTypeSummonersRift
 }
 
 func positionOf(participant *lol.Participant) model.Position {
