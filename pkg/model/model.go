@@ -70,7 +70,7 @@ type MatchMetrics struct {
 	Assists              int
 	CS                   int
 	CSPerMinute          float64
-	ChampionName         string
+	ChampionName         Champion // TODO Rename to "Champion"
 	ControlWardsPlaced   int
 	DamageDealt          int
 	DamageDealtPerMinute float64
@@ -86,6 +86,12 @@ type MatchMetrics struct {
 	WardsKilled          int
 	WardsPlaced          int
 	Win                  bool
+}
+
+type Champion string
+
+func (c Champion) String() string {
+	return string(c)
 }
 
 type MatchType int
@@ -107,26 +113,28 @@ type Position int
 
 const (
 	Unknown Position = iota
-	RoleTop
-	RoleJungle
-	RoleMiddle
-	RoleBottom
-	RoleSupport
+	PositionTop
+	PositionJungle
+	PositionMiddle
+	PositionBottom
+	PositionSupport
 )
+
+var Positions = []Position{PositionTop, PositionJungle, PositionMiddle, PositionBottom, PositionSupport}
 
 func (p Position) String() string {
 	switch p {
 	case Unknown:
 		return "Unknown"
-	case RoleTop:
+	case PositionTop:
 		return "Top"
-	case RoleJungle:
+	case PositionJungle:
 		return "Jungle"
-	case RoleMiddle:
+	case PositionMiddle:
 		return "Middle"
-	case RoleBottom:
+	case PositionBottom:
 		return "Bottom"
-	case RoleSupport:
+	case PositionSupport:
 		return "Support"
 	default:
 		return ""

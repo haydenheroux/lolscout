@@ -7,25 +7,25 @@ import (
 	"github.com/haydenheroux/lolscout/pkg/model"
 )
 
-type MatchMetricsModel struct {
+type MatchMetrics struct {
 	Metrics model.MatchMetrics
 }
 
-type theme struct {
+type matchMetricsTheme struct {
 	background lipgloss.Color
 	border     lipgloss.Color
 	gap        int
 }
 
-func (mp MatchMetricsModel) theme() theme {
-	if mp.Metrics.Win {
-		return theme{
+func (m MatchMetrics) theme() matchMetricsTheme {
+	if m.Metrics.Win {
+		return matchMetricsTheme{
 			background: blueBackgroundColor,
 			border:     blueBorderColor,
 			gap:        1,
 		}
 	} else {
-		return theme{
+		return matchMetricsTheme{
 			background: redBackgroundColor,
 			border:     redBorderColor,
 			gap:        1,
@@ -33,16 +33,16 @@ func (mp MatchMetricsModel) theme() theme {
 	}
 }
 
-func (mp MatchMetricsModel) infoSectionView() string {
-	background := mp.theme().background
+func (m MatchMetrics) infoSectionView() string {
+	background := m.theme().background
 
-	durationString := fmt.Sprintf("%dm", int(mp.Metrics.DurationMinutes))
+	durationString := fmt.Sprintf("%dm", int(m.Metrics.DurationMinutes))
 
 	minWidth := 10
-	width := max(len(mp.Metrics.MatchType.String()), len(durationString), minWidth)
+	width := max(len(m.Metrics.MatchType.String()), len(durationString), minWidth)
 
 	matchType := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
-	renderedMatchType := matchType.Render(mp.Metrics.MatchType.String())
+	renderedMatchType := matchType.Render(m.Metrics.MatchType.String())
 
 	duration := lipgloss.NewStyle().Background(background).Width(width)
 	renderedDuration := duration.Render(durationString)
@@ -50,17 +50,17 @@ func (mp MatchMetricsModel) infoSectionView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedMatchType, renderedDuration)
 }
 
-func (mp MatchMetricsModel) championView() string {
-	background := mp.theme().background
+func (m MatchMetrics) championView() string {
+	background := m.theme().background
 
-	levelString := fmt.Sprintf("Lvl. %d", mp.Metrics.Level)
+	levelString := fmt.Sprintf("Lvl. %d", m.Metrics.Level)
 
 	minWidth := 10
-	width := max(len(levelString), len(mp.Metrics.ChampionName), minWidth)
+	width := max(len(levelString), len(m.Metrics.ChampionName), minWidth)
 
 	championName := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
 
-	renderedChampionName := championName.Render(mp.Metrics.ChampionName)
+	renderedChampionName := championName.Render(m.Metrics.ChampionName.String())
 
 	level := lipgloss.NewStyle().Background(background).Width(width)
 
@@ -69,13 +69,13 @@ func (mp MatchMetricsModel) championView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedChampionName, renderedLevel)
 }
 
-func (mp MatchMetricsModel) kdaView() string {
-	background := mp.theme().background
+func (m MatchMetrics) kdaView() string {
+	background := m.theme().background
 
-	kdRatio := float64(mp.Metrics.Kills + mp.Metrics.Assists)
+	kdRatio := float64(m.Metrics.Kills + m.Metrics.Assists)
 
-	if mp.Metrics.Deaths > 0 {
-		kdRatio /= float64(mp.Metrics.Deaths)
+	if m.Metrics.Deaths > 0 {
+		kdRatio /= float64(m.Metrics.Deaths)
 	}
 
 	whiteKda := lipgloss.NewStyle().Background(background)
@@ -102,7 +102,7 @@ func (mp MatchMetricsModel) kdaView() string {
 
 	renderedKdaText := kdaTextStyle.Render(kdaText)
 
-	killParticipationString := fmt.Sprintf("(%.0f%% KP)", mp.Metrics.KillParticipation*100)
+	killParticipationString := fmt.Sprintf("(%.0f%% KP)", m.Metrics.KillParticipation*100)
 
 	killParticipation := lipgloss.NewStyle().Background(background)
 
@@ -116,7 +116,7 @@ func (mp MatchMetricsModel) kdaView() string {
 	// TODO Take width into account
 	renderedKdaBottomSection := lipgloss.JoinHorizontal(lipgloss.Bottom, renderedKdaText, renderedKillParticipation)
 
-	kdaString := fmt.Sprintf("%d/%d/%d", mp.Metrics.Kills, mp.Metrics.Deaths, mp.Metrics.Assists)
+	kdaString := fmt.Sprintf("%d/%d/%d", m.Metrics.Kills, m.Metrics.Deaths, m.Metrics.Assists)
 
 	minWidth := 24
 	width := max(len(kdaString), lipgloss.Width(renderedKdaBottomSection), minWidth)
@@ -133,12 +133,12 @@ func (mp MatchMetricsModel) kdaView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedKda, rerenderedKdaBottomSection)
 }
 
-func (mp MatchMetricsModel) creepScoreView() string {
-	background := mp.theme().background
+func (m MatchMetrics) creepScoreView() string {
+	background := m.theme().background
 
-	csString := fmt.Sprintf("%d CS", mp.Metrics.CS)
+	csString := fmt.Sprintf("%d CS", m.Metrics.CS)
 
-	csPerMinuteString := fmt.Sprintf("%.1f/m", mp.Metrics.CSPerMinute)
+	csPerMinuteString := fmt.Sprintf("%.1f/m", m.Metrics.CSPerMinute)
 
 	csPerMinute := lipgloss.NewStyle().Background(background)
 
@@ -163,19 +163,19 @@ func (mp MatchMetricsModel) creepScoreView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, renderedCs, rerenderedCsPerMinute)
 }
 
-func (mp MatchMetricsModel) View() string {
-	theme := mp.theme()
+func (m MatchMetrics) View() string {
+	theme := m.theme()
 	background := theme.background
 	border := theme.border
 
-	renderedBody := theme.joinHorizontal(mp.infoSectionView(), mp.championView(), mp.kdaView(), mp.creepScoreView())
+	renderedBody := theme.joinHorizontal(m.infoSectionView(), m.championView(), m.kdaView(), m.creepScoreView())
 
 	container := lipgloss.NewStyle().Background(background).Border(lipgloss.BlockBorder(), false, false, false, true).BorderForeground(border).Padding(2).MarginBottom(1)
 
 	return container.Render(renderedBody)
 }
 
-func (theme theme) joinHorizontal(sections ...string) string {
+func (theme matchMetricsTheme) joinHorizontal(sections ...string) string {
 	if len(sections) == 0 {
 		return ""
 	}

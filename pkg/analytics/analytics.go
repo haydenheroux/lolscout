@@ -7,40 +7,40 @@ import (
 	"github.com/montanaflynn/stats"
 )
 
-type norm struct {
+type Norm struct {
 	Mean   float64
 	StdDev float64
 }
 
-func (n norm) String() string {
+func (n Norm) String() string {
 	return fmt.Sprintf("N(μ: %.4f, σ: %.4f)", n.Mean, n.StdDev)
 }
 
-func calculateNorm(xs interface{}) norm {
+func calculateNorm(xs interface{}) Norm {
 	data := stats.LoadRawData(xs)
 
 	mean, _ := data.Mean()
 	stdDev, _ := data.StandardDeviation()
 
-	return norm{
+	return Norm{
 		Mean:   mean,
 		StdDev: stdDev,
 	}
 }
 
 type Analytics struct {
-	Assists              norm
-	CSPerMinute          norm
-	ControlWardsPlaced   norm
-	DamageDealtPerMinute norm
-	DamageDealtShare     norm
-	Deaths               norm
-	KillParticipation    norm
-	Kills                norm
+	Assists              Norm
+	CSPerMinute          Norm
+	ControlWardsPlaced   Norm
+	DamageDealtPerMinute Norm
+	DamageDealtShare     Norm
+	Deaths               Norm
+	KillParticipation    Norm
+	Kills                Norm
 	Size                 int
-	TurretsTaken         norm
-	WardsKilled          norm
-	WardsPlaced          norm
+	TurretsTaken         Norm
+	WardsKilled          Norm
+	WardsPlaced          Norm
 	WinRate              float64
 }
 
@@ -64,7 +64,7 @@ func (a Analytics) String() string {
 	return s
 }
 
-func Analyze(metrics []model.MatchMetrics) Analytics {
+func Analyze(metrics []model.MatchMetrics) *Analytics {
 	assists := make([]int, len(metrics))
 	csPerMinute := make([]float64, len(metrics))
 	controlWardsPlaced := make([]int, len(metrics))
@@ -106,7 +106,7 @@ func Analyze(metrics []model.MatchMetrics) Analytics {
 	wardsPlacedNorm := calculateNorm(wardsPlaced)
 	winRate := percentTrue(wins)
 
-	return Analytics{
+	return &Analytics{
 		Assists:              assistsNorm,
 		CSPerMinute:          csPerMinuteNorm,
 		ControlWardsPlaced:   controlWardsPlacedNorm,
@@ -135,10 +135,12 @@ func percentTrue(slice []bool) float64 {
 	return float64(trues) / float64(len(slice))
 }
 
-func AnalyzeByChampion(metrics []model.MatchMetrics) map[string]Analytics {
+type AnalyticsByChampion map[model.Champion]*Analytics
+
+func AnalyzeByChampion(metrics []model.MatchMetrics) AnalyticsByChampion {
 	metricsByChampion := byChampion(metrics)
 
-	analyticsByChampion := make(map[string]Analytics)
+	analyticsByChampion := make(AnalyticsByChampion)
 
 	for champion, metrics := range metricsByChampion {
 		analyticsByChampion[champion] = Analyze(metrics)
@@ -147,7 +149,7 @@ func AnalyzeByChampion(metrics []model.MatchMetrics) map[string]Analytics {
 	return analyticsByChampion
 }
 
-type championMetrics map[string][]model.MatchMetrics
+type championMetrics map[model.Champion][]model.MatchMetrics
 
 func byChampion(metrics []model.MatchMetrics) championMetrics {
 	championMetrics := make(championMetrics)
@@ -165,10 +167,12 @@ func byChampion(metrics []model.MatchMetrics) championMetrics {
 	return championMetrics
 }
 
-func AnalyzeByPosition(metrics []model.MatchMetrics) map[model.Position]Analytics {
+type AnalyticsByPosition map[model.Position]*Analytics
+
+func AnalyzeByPosition(metrics []model.MatchMetrics) AnalyticsByPosition {
 	metricsByPosition := byPosition(metrics)
 
-	analyticsByPosition := make(map[model.Position]Analytics)
+	analyticsByPosition := make(AnalyticsByPosition)
 
 	for position, metrics := range metricsByPosition {
 		analyticsByPosition[position] = Analyze(metrics)

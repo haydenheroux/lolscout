@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/haydenheroux/lolscout/pkg/analytics"
 	"github.com/haydenheroux/lolscout/pkg/model"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -75,4 +76,41 @@ func (dbc client) GetMatchIDsForPUUID(puuid string) ([]string, error) {
 	}
 
 	return matchIDs, nil
+}
+
+func (dbc client) GetMetricsForPosition(position model.Position) ([]model.MatchMetrics, error) {
+	var metrics []model.MatchMetrics
+
+	if err := dbc.DB.Model(&model.MatchMetrics{}).Where("position = ?", position).Find(&metrics).Error; err != nil {
+		return nil, err
+	}
+
+	return metrics, nil
+}
+
+func (dbc client) GetMetricsForChampion(champion model.Champion) ([]model.MatchMetrics, error) {
+	var metrics []model.MatchMetrics
+
+	if err := dbc.DB.Model(&model.MatchMetrics{}).Where("champion_name = ?", champion).Find(&metrics).Error; err != nil {
+		return nil, err
+	}
+
+	return metrics, nil
+}
+
+func (dbc client) GetPositionThresholds(percentile float64) (map[model.Position]*analytics.Thresholds, error) {
+	result := make(map[model.Position]*analytics.Thresholds)
+
+	for _, position := range model.Positions {
+		metrics, err := dbc.GetMetricsForPosition(position)
+		if err != nil {
+			return result, err
+		}
+
+		positionAnalytics := analytics.Analyze(metrics)
+
+		result[position] = analytics.PercentileTresholds(*positionAnalytics, percentile)
+	}
+
+	return result, nil
 }

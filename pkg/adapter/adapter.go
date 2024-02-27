@@ -52,7 +52,7 @@ func MatchMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics 
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
 			metrics.CSPerMinute = float64(metrics.CS) / float64(durationMinutes)
-			metrics.ChampionName = participant.ChampionName
+			metrics.ChampionName = model.Champion(metrics.ChampionName)
 			metrics.ControlWardsPlaced = participant.DetectorWardsPlaced
 			metrics.DamageDealt = participant.TotalDamageDealt
 			metrics.DamageDealtPerMinute = float64(metrics.DamageDealt) / float64(durationMinutes)
@@ -84,15 +84,15 @@ func matchTypeOf(match *lol.Match) model.MatchType {
 func positionOf(participant *lol.Participant) model.Position {
 	switch participant.TeamPosition {
 	case "TOP":
-		return model.RoleTop
+		return model.PositionTop
 	case "JUNGLE":
-		return model.RoleJungle
+		return model.PositionJungle
 	case "MIDDLE":
-		return model.RoleMiddle
+		return model.PositionMiddle
 	case "BOTTOM":
-		return model.RoleBottom
+		return model.PositionBottom
 	case "UTILITY":
-		return model.RoleSupport
+		return model.PositionSupport
 	}
 
 	return model.Unknown

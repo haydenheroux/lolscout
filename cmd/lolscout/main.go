@@ -14,6 +14,7 @@ import (
 	riotApi "github.com/haydenheroux/lolscout/pkg/api/riot"
 	"github.com/haydenheroux/lolscout/pkg/db"
 	"github.com/haydenheroux/lolscout/pkg/model"
+	"github.com/haydenheroux/lolscout/pkg/tui"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
@@ -113,8 +114,6 @@ func createPlayVSCommand() *cli.Command {
 						fmt.Println(riotId)
 
 						analyzePlayer(riotId)
-
-						fmt.Println("\n", "\n", "\n")
 					}
 
 					return nil
@@ -371,21 +370,25 @@ func analyzePlayer(riotId string) error {
 		}
 	}
 
+	thresholdsByPosition, err := dbc.GetPositionThresholds(0.6827)
+
 	analyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
+
+	first := true
 
 	for position, analytics := range analyticsByPosition {
 		if analytics.Size > 2 {
+			if !first {
+				fmt.Println()
+			}
+
+			first = false
+
 			fmt.Println(position)
-			fmt.Println(analytics)
-		}
-	}
 
-	analyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
+			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByPosition[position]}
 
-	for champion, analytics := range analyticsByChampion {
-		if analytics.Size > 2 {
-			fmt.Println(champion)
-			fmt.Println(analytics)
+			fmt.Println(a.View())
 		}
 	}
 
