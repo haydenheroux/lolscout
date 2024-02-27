@@ -17,6 +17,7 @@ import (
 	"github.com/haydenheroux/lolscout/pkg/tui"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+	"gorm.io/gorm"
 )
 
 type Environment struct {
@@ -43,6 +44,36 @@ func createCLIApp() *cli.App {
 		Commands: []*cli.Command{
 			createLOLCommand(),
 			createPlayVSCommand(),
+			{
+				Name:  "thresholds",
+				Usage: "prints per-role thresholds",
+				Action: func(c *cli.Context) error {
+					dbc, err := db.CreateClient(environment.DatabaseName)
+					if err != nil {
+						return err
+					}
+
+					thresholdsByPosition, err := dbc.GetPositionThresholds(0.6827)
+					if err != nil {
+						return err
+					}
+
+					first := true
+
+					for position, thresholds := range thresholdsByPosition {
+						if !first {
+							fmt.Println()
+						}
+
+						first = false
+
+						fmt.Println(position)
+						fmt.Println(thresholds)
+					}
+
+					return nil
+				},
+			},
 		},
 	}
 	return app
@@ -244,8 +275,20 @@ func scanLeagueOfLegendsMatches(gameName, tagLine string, startTime time.Time) e
 
 	puuid := account.PUUID
 
-	player, err := dbc.GetPlayerByPUUID(puuid)
-	if err != nil {
+	var player *model.Player
+
+	p, err := dbc.GetPlayerByPUUID(puuid)
+	if err == nil {
+		player = p
+	} else if errors.Is(err, gorm.ErrRecordNotFound) {
+		player = &model.Player{
+			PUUID:         puuid,
+			GameName:      gameName,
+			TagLine:       tagLine,
+			TeamID:        nil,
+			PlayerMetrics: make([]model.MatchMetrics, 0),
+		}
+	} else {
 		return err
 	}
 
@@ -371,6 +414,9 @@ func analyzePlayer(riotId string) error {
 	}
 
 	thresholdsByPosition, err := dbc.GetPositionThresholds(0.6827)
+	if err != nil {
+		return err
+	}
 
 	analyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
 

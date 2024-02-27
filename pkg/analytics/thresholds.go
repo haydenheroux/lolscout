@@ -1,6 +1,8 @@
 package analytics
 
 import (
+	"fmt"
+
 	"github.com/montanaflynn/stats"
 )
 
@@ -17,6 +19,25 @@ type Thresholds struct {
 	WardsKilled          float64
 	WardsPlaced          float64
 	WinRate              float64
+}
+
+func (t Thresholds) String() string {
+	var s string
+
+	s += fmt.Sprintln("Assists:", t.Assists)
+	s += fmt.Sprintln("CSPerMinute:", t.CSPerMinute)
+	s += fmt.Sprintln("ControlWardsPlaced:", t.ControlWardsPlaced)
+	s += fmt.Sprintln("DamageDealtPerMinute:", t.DamageDealtPerMinute)
+	s += fmt.Sprintln("DamageDealtShare:", t.DamageDealtShare)
+	s += fmt.Sprintln("Deaths:", t.Deaths)
+	s += fmt.Sprintln("KillParticipation:", t.KillParticipation)
+	s += fmt.Sprintln("Kills:", t.Kills)
+	s += fmt.Sprintln("TurretsTaken:", t.TurretsTaken)
+	s += fmt.Sprintln("WardsKilled:", t.WardsKilled)
+	s += fmt.Sprintln("WardsPlaced:", t.WardsPlaced)
+	s += fmt.Sprintf("WinRate: %.4f\n", t.WinRate)
+
+	return s
 }
 
 func GeneralThresholds() *Thresholds {
