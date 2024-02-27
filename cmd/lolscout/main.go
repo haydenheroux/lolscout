@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	env "github.com/Netflix/go-env"
@@ -46,14 +47,27 @@ func createCLIApp() *cli.App {
 			createPlayVSCommand(),
 			{
 				Name:  "thresholds",
-				Usage: "prints per-role thresholds",
+				Usage: "prints thresholds",
 				Action: func(c *cli.Context) error {
 					dbc, err := db.CreateClient(environment.DatabaseName)
 					if err != nil {
 						return err
 					}
 
-					thresholdsByPosition, err := dbc.GetPositionThresholds(0.6827)
+					var percentile float64
+
+					if c.Args().Len() == 0 {
+						percentile = 0.5
+					} else {
+						f, err := strconv.ParseFloat(c.Args().First(), 64)
+						if err != nil {
+							return err
+						}
+
+						percentile = f
+					}
+
+					thresholdsByPosition, err := dbc.GetPositionThresholds(percentile)
 					if err != nil {
 						return err
 					}
@@ -68,7 +82,43 @@ func createCLIApp() *cli.App {
 						first = false
 
 						fmt.Println(position)
-						fmt.Println(thresholds)
+						fmt.Print(thresholds)
+					}
+
+					thresholdsByChampion, err := dbc.GetChampionThresholds(percentile)
+
+					first = true
+
+					for champion, thresholds := range thresholdsByChampion {
+						if !first {
+							fmt.Println()
+						}
+
+						first = false
+
+						fmt.Println(champion)
+						fmt.Print(thresholds)
+					}
+
+					return nil
+				},
+			},
+			{
+				Name:  "champions",
+				Usage: "prints played champions",
+				Action: func(c *cli.Context) error {
+					dbc, err := db.CreateClient(environment.DatabaseName)
+					if err != nil {
+						return err
+					}
+
+					champions, err := dbc.GetChampions()
+					if err != nil {
+						return err
+					}
+
+					for _, champion := range champions {
+						fmt.Println(champion)
 					}
 
 					return nil
@@ -418,6 +468,11 @@ func analyzePlayer(riotId string) error {
 		return err
 	}
 
+	thresholdsByChampion, err := dbc.GetChampionThresholds(0.6827)
+	if err != nil {
+		return err
+	}
+
 	analyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
 
 	first := true
@@ -433,6 +488,26 @@ func analyzePlayer(riotId string) error {
 			fmt.Println(position)
 
 			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByPosition[position]}
+
+			fmt.Println(a.View())
+		}
+	}
+
+	analyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
+
+	first = true
+
+	for champion, analytics := range analyticsByChampion {
+		if analytics.Size > 2 {
+			if !first {
+				fmt.Println()
+			}
+
+			first = false
+
+			fmt.Println(champion)
+
+			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByChampion[champion]}
 
 			fmt.Println(a.View())
 		}

@@ -102,14 +102,47 @@ func (dbc client) GetPositionThresholds(percentile float64) (map[model.Position]
 	result := make(map[model.Position]*analytics.Thresholds)
 
 	for _, position := range model.Positions {
-		metrics, err := dbc.GetMetricsForPosition(position)
+		positionMetrics, err := dbc.GetMetricsForPosition(position)
 		if err != nil {
 			return result, err
 		}
 
-		positionAnalytics := analytics.Analyze(metrics)
+		positionAnalytics := analytics.Analyze(positionMetrics)
 
 		result[position] = analytics.PercentileTresholds(*positionAnalytics, percentile)
+	}
+
+	return result, nil
+}
+
+func (dbc client) GetChampions() ([]model.Champion, error) {
+	var champions []model.Champion
+
+	if err := dbc.DB.Model(&model.MatchMetrics{}).Distinct().Pluck("champion_name", &champions).Error; err != nil {
+		return []model.Champion{}, err
+	}
+
+	return champions, nil
+
+}
+
+func (dbc client) GetChampionThresholds(percentile float64) (map[model.Champion]*analytics.Thresholds, error) {
+	result := make(map[model.Champion]*analytics.Thresholds)
+
+	champions, err := dbc.GetChampions()
+	if err != nil {
+		return result, err
+	}
+
+	for _, champion := range champions {
+		championMetrics, err := dbc.GetMetricsForChampion(champion)
+		if err != nil {
+			return result, err
+		}
+
+		championAnalytics := analytics.Analyze(championMetrics)
+
+		result[champion] = analytics.PercentileTresholds(*championAnalytics, percentile)
 	}
 
 	return result, nil
