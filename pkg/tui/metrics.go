@@ -20,14 +20,14 @@ type matchMetricsTheme struct {
 func (m MatchMetrics) theme() matchMetricsTheme {
 	if m.Metrics.Win {
 		return matchMetricsTheme{
-			background: blueBackgroundColor,
-			border:     blueBorderColor,
+			background: opggBlueBackground,
+			border:     opggBlueBorder,
 			gap:        1,
 		}
 	} else {
 		return matchMetricsTheme{
-			background: redBackgroundColor,
-			border:     redBorderColor,
+			background: opggRedBackground,
+			border:     opggRedBorder,
 			gap:        1,
 		}
 	}

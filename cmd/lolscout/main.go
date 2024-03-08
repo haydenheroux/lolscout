@@ -485,11 +485,9 @@ func analyzePlayer(riotId string) error {
 
 			first = false
 
-			fmt.Println(position)
-
 			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByPosition[position]}
 
-			fmt.Println(a.View())
+			fmt.Println(a.View(position.String()))
 		}
 	}
 
@@ -505,11 +503,9 @@ func analyzePlayer(riotId string) error {
 
 			first = false
 
-			fmt.Println(champion)
-
 			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByChampion[champion]}
 
-			fmt.Println(a.View())
+			fmt.Println(a.View(string(champion)))
 		}
 	}
 
