@@ -463,12 +463,15 @@ func analyzePlayer(riotId string) error {
 		}
 	}
 
-	thresholdsByPosition, err := dbc.GetPositionThresholds(0.6827)
+	// z := 0.6827
+	z := 0.5
+
+	thresholdsByPosition, err := dbc.GetPositionThresholds(z)
 	if err != nil {
 		return err
 	}
 
-	thresholdsByChampion, err := dbc.GetChampionThresholds(0.6827)
+	thresholdsByChampion, err := dbc.GetChampionThresholds(z)
 	if err != nil {
 		return err
 	}
@@ -495,17 +498,15 @@ func analyzePlayer(riotId string) error {
 
 	first = true
 
-	for champion, analytics := range analyticsByChampion {
-		if analytics.Size > 2 {
+	for champion, as := range analyticsByChampion {
+		if as.Size > 2 {
 			if !first {
 				fmt.Println()
 			}
 
 			first = false
 
-			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByChampion[champion]}
-
-			fmt.Println(a.View(string(champion)))
+			fmt.Println(tui.ViewAnalytics([]string{champion.String(), "Population", "Sample"}, thresholdsByChampion[champion], []*analytics.Analytics{as}))
 		}
 	}
 

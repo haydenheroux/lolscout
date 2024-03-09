@@ -61,6 +61,45 @@ func (a Analytics) View(title string) string {
 	return t.String()
 }
 
+func getMany(get func(a *analytics.Analytics) float64, as []*analytics.Analytics) []float64 {
+	var result []float64
+
+	for _, a := range as {
+		result = append(result, get(a))
+	}
+
+	return result
+}
+
+func format(ns []float64) []string {
+	var result []string
+
+	for _, n := range ns {
+		result = append(result, fmt.Sprintf("%.2f", n))
+	}
+
+	return result
+}
+
+func ViewAnalytics(headers []string, t *analytics.Thresholds, as []*analytics.Analytics) string {
+	table := createTable()
+
+	table.Headers(headers...)
+
+	getAssists := func(a *analytics.Analytics) float64 {
+		return a.Assists.Mean
+	}
+
+	assists := []string{"Assists"}
+
+	assists = append(assists, format([]float64{t.Assists})...)
+	assists = append(assists, format(getMany(getAssists, as))...)
+
+	table.Row(assists...)
+
+	return table.String()
+}
+
 type colorer func(value float64) lipgloss.Color
 
 func exceeds(threshold float64, color lipgloss.Color) colorer {
