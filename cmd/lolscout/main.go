@@ -219,8 +219,7 @@ func createAnalyzeCommand() *cli.Command {
 		Name:  "analyze",
 		Usage: "Analyze player metrics",
 		Action: func(c *cli.Context) error {
-			riotId := c.Args().First()
-			return analyzePlayers([]string{riotId})
+			return analyzePlayers(c.Args().Slice())
 		},
 	}
 }
