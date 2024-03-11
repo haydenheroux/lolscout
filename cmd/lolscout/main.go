@@ -393,12 +393,12 @@ func analyzePlayer(riotId string) error {
 		return err
 	}
 
-	analyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
+	playerAnalyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
 
 	first := true
 
-	for position, analytics := range analyticsByPosition {
-		if analytics.Size < 2 {
+	for position, playerAnalyticsForPosition := range playerAnalyticsByPosition {
+		if playerAnalyticsForPosition.Size < 2 {
 			continue
 		}
 
@@ -408,15 +408,19 @@ func analyzePlayer(riotId string) error {
 
 		first = false
 
-		fmt.Println(tui.ViewAnalytics(position.String(), []string{"μ", "1σ", riotId}, globalAnalyticsByPosition[position].Mean(), globalAnalyticsByPosition[position].Percentile(0.841), analytics.Mean()))
+		headers := []string{"μ", "1σ", "2σ", riotId}
+
+		globalAnalyticsForPosition := globalAnalyticsByPosition[position]
+
+		fmt.Println(tui.ViewAnalytics(position.String(), headers, globalAnalyticsForPosition.Mean(), globalAnalyticsForPosition.ZScore(1), globalAnalyticsForPosition.ZScore(2), playerAnalyticsForPosition.Mean()))
 	}
 
-	analyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
+	playerAnalyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
 
 	first = true
 
-	for champion, analytics := range analyticsByChampion {
-		if analytics.Size < 2 {
+	for champion, playerAnalyticsForChampion := range playerAnalyticsByChampion {
+		if playerAnalyticsForChampion.Size < 2 {
 			continue
 		}
 
@@ -426,7 +430,11 @@ func analyzePlayer(riotId string) error {
 
 		first = false
 
-		fmt.Println(tui.ViewAnalytics(champion.String(), []string{"μ", "1σ", riotId}, globalAnalyticsByChampion[champion].Mean(), globalAnalyticsByChampion[champion].Percentile(0.841), analytics.Mean()))
+		headers := []string{"μ", "1σ", "2σ", riotId}
+
+		globalAnalyticsForChampion := globalAnalyticsByChampion[champion]
+
+		fmt.Println(tui.ViewAnalytics(champion.String(), headers, globalAnalyticsForChampion.Mean(), globalAnalyticsForChampion.ZScore(1), globalAnalyticsForChampion.ZScore(2), playerAnalyticsForChampion.Mean()))
 	}
 
 	return nil

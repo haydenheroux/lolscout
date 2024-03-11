@@ -80,7 +80,13 @@ type AnalyticsSnapshot struct {
 }
 
 func (a Analytics) Mean() *AnalyticsSnapshot {
-	return a.Percentile(0.5)
+	return a.ZScore(0)
+}
+
+func (a Analytics) ZScore(z float64) *AnalyticsSnapshot {
+	percentile := stats.NormCdf(z, 0, 1)
+
+	return a.Percentile(percentile)
 }
 
 func (a Analytics) Percentile(percentile float64) *AnalyticsSnapshot {

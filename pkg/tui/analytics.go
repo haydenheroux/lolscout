@@ -17,7 +17,7 @@ func createTable() *table.Table {
 		case row == 0:
 			return lipgloss.NewStyle().Bold(true).Foreground(draculaForegroundWhite).Align(lipgloss.Center)
 		default:
-			return lipgloss.NewStyle().Foreground(draculaForegroundWhite)
+			return lipgloss.NewStyle().Foreground(draculaForegroundWhite).Padding(0, 1)
 		}
 	})
 
