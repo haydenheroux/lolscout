@@ -268,6 +268,8 @@ func scanLeagueOfLegendsMatches(gameName, tagLine string, startTime time.Time) e
 		return err
 	}
 
+	log.Infof("getting matches for %s", riotApi.Join(gameName, tagLine))
+
 	summoner, err := lol.SummonerByPUUID(puuid)
 	if err != nil {
 		return err
@@ -339,7 +341,7 @@ func initializePlayVSTeams() error {
 			account, err := riot.Get(gameName, tagLine).Account()
 			if err != nil {
 				log.Warnf("could not find riot id %s", displayName)
-				log.Infof("reason: %v", err)
+				log.Warnf("reason: %v", err)
 				continue
 			}
 
@@ -357,14 +359,7 @@ func initializePlayVSTeams() error {
 }
 
 func analyzePlayer(riotId string) error {
-	riot := riotApi.CreateClient(environment.RiotApiKey)
-
 	name, tag, err := riotApi.Split(riotId)
-	if err != nil {
-		return err
-	}
-
-	account, err := riot.Get(name, tag).Account()
 	if err != nil {
 		return err
 	}
@@ -374,7 +369,7 @@ func analyzePlayer(riotId string) error {
 		return err
 	}
 
-	player, err := dbc.GetPlayerByPUUID(account.PUUID)
+	player, err := dbc.GetPlayerByNameTag(name, tag)
 	if err != nil {
 		return err
 	}

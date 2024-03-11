@@ -54,6 +54,14 @@ func (dbc client) CreateOrUpdatePlayer(player *model.Player) error {
 	return dbc.DB.Save(player).Error
 }
 
+func (dbc client) GetPlayerByNameTag(gameName, tagLine string) (*model.Player, error) {
+	var player model.Player
+	if err := dbc.DB.Model(&model.Player{}).Preload("PlayerMetrics").First(&player, "game_name = ? AND tag_line = ?", gameName, tagLine).Error; err != nil {
+		return nil, err
+	}
+	return &player, nil
+}
+
 func (dbc client) GetPlayerByPUUID(puuid string) (*model.Player, error) {
 	var player model.Player
 	if err := dbc.DB.Model(&model.Player{}).Preload("PlayerMetrics").First(&player, "puuid = ?", puuid).Error; err != nil {
