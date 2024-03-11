@@ -208,10 +208,27 @@ func AnalyzeByChampion(metrics []model.MatchMetrics) AnalyticsByChampion {
 	analyticsByChampion := make(AnalyticsByChampion)
 
 	for champion, metrics := range metricsByChampion {
-		analyticsByChampion[champion] = Analyze(metrics)
+		result := Analyze(metrics)
+
+		// Sample size too small; reject
+		if result.Size < 2 {
+			continue
+		}
+
+		analyticsByChampion[champion] = result
 	}
 
 	return analyticsByChampion
+}
+
+func AnalyzeForChampion(metrics []model.MatchMetrics, champion model.Champion) *Analytics {
+	analyticsByChampion := AnalyzeByChampion(metrics)
+
+	if analytics, ok := analyticsByChampion[champion]; !ok {
+		return nil
+	} else {
+		return analytics
+	}
 }
 
 type championMetrics map[model.Champion][]model.MatchMetrics
@@ -240,10 +257,27 @@ func AnalyzeByPosition(metrics []model.MatchMetrics) AnalyticsByPosition {
 	analyticsByPosition := make(AnalyticsByPosition)
 
 	for position, metrics := range metricsByPosition {
-		analyticsByPosition[position] = Analyze(metrics)
+		result := Analyze(metrics)
+
+		// Sample size too small; reject
+		if result.Size < 2 {
+			continue
+		}
+
+		analyticsByPosition[position] = result
 	}
 
 	return analyticsByPosition
+}
+
+func AnalyzeForPosition(metrics []model.MatchMetrics, position model.Position) *Analytics {
+	analyticsByPosition := AnalyzeByPosition(metrics)
+
+	if analytics, ok := analyticsByPosition[position]; !ok {
+		return nil
+	} else {
+		return analytics
+	}
 }
 
 type positionMetrics map[model.Position][]model.MatchMetrics

@@ -26,7 +26,11 @@ func createTable() *table.Table {
 	return t
 }
 
-func ViewAnalytics(title string, columns []string, analytics []*analytics.AnalyticsSnapshot) string {
+func ViewAnalytics(title string, columns []string, analytics []*analytics.AnalyticsSnapshot) {
+	if len(columns) == 0 || len(analytics) == 0 {
+		return
+	}
+
 	if len(columns) != len(analytics) {
 		panic("mismatch between number of columns and analytics")
 	}
@@ -52,5 +56,5 @@ func ViewAnalytics(title string, columns []string, analytics []*analytics.Analyt
 		t.Row(rowValues...)
 	}
 
-	return t.String()
+	fmt.Println(t.String())
 }

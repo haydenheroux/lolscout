@@ -104,13 +104,13 @@ func createPlayVSCommand() *cli.Command {
 						return err
 					}
 
-					for _, player := range team.Players {
-						riotId := riotApi.Join(player.GameName, player.TagLine)
+					riotIds := make([]string, len(team.Players))
 
-						fmt.Println(riotId)
-
-						analyzePlayer(riotId)
+					for i, player := range team.Players {
+						riotIds[i] = riotApi.Join(player.GameName, player.TagLine)
 					}
+
+					analyzePlayers(riotIds)
 
 					return nil
 				},
@@ -220,7 +220,7 @@ func createAnalyzeCommand() *cli.Command {
 		Usage: "Analyze player metrics",
 		Action: func(c *cli.Context) error {
 			riotId := c.Args().First()
-			return analyzePlayer(riotId)
+			return analyzePlayers([]string{riotId})
 		},
 	}
 }
@@ -358,105 +358,100 @@ func initializePlayVSTeams() error {
 	return nil
 }
 
-func analyzePlayer(riotId string) error {
-	name, tag, err := riotApi.Split(riotId)
-	if err != nil {
-		return err
-	}
-
+func analyzePlayers(riotIds []string) error {
 	dbc, err := db.CreateClient(environment.DatabaseName)
 	if err != nil {
 		return err
 	}
 
-	player, err := dbc.GetPlayerByNameTag(name, tag)
-	if err != nil {
-		return err
-	}
+	xs := make(map[string][]model.MatchMetrics)
 
-	var s14PlayerMetrics []model.MatchMetrics
-
-	s14Start := time.Date(2024, time.January, 10, 0, 0, 0, 0, time.UTC)
-
-	for _, metrics := range player.PlayerMetrics {
-		if metrics.StartTime.After(s14Start) {
-			s14PlayerMetrics = append(s14PlayerMetrics, metrics)
+	for _, riotId := range riotIds {
+		name, tag, err := riotApi.Split(riotId)
+		if err != nil {
+			return err
 		}
+
+		player, err := dbc.GetPlayerByNameTag(name, tag)
+		if err != nil {
+			return err
+		}
+
+		var s14Metrics []model.MatchMetrics
+
+		s14Start := time.Date(2024, time.January, 10, 0, 0, 0, 0, time.UTC)
+
+		for _, metrics := range player.PlayerMetrics {
+			if metrics.StartTime.After(s14Start) {
+				s14Metrics = append(s14Metrics, metrics)
+			}
+		}
+
+		xs[riotId] = s14Metrics
 	}
 
-	globalAnalyticsByPosition, err := dbc.GetAnalyticsByPosition()
+	doPositions(model.Positions, xs)
+
+	allChampions, err := dbc.GetChampions()
 	if err != nil {
 		return err
 	}
 
-	doPosition(globalAnalyticsByPosition, s14PlayerMetrics, riotId)
-
-	globalAnalyticsByChampion, err := dbc.GetAnalyticsByChampion()
-	if err != nil {
-		return err
-	}
-
-	doChampion(globalAnalyticsByChampion, s14PlayerMetrics, riotId)
+	doChampions(allChampions, xs)
 
 	return nil
 }
 
-type playerToAnalyticsByPosition map[string]analytics.AnalyticsByPosition
-
-func doPosition(globalAnalyticsByPosition analytics.AnalyticsByPosition, metrics []model.MatchMetrics, riotId string) error {
-	playerAnalyticsByPosition := analytics.AnalyzeByPosition(metrics)
-
-	first := true
-
-	for position, playerAnalyticsForPosition := range playerAnalyticsByPosition {
-		if playerAnalyticsForPosition.Size < 2 {
-			continue
-		}
-
-		if first {
-			first = false
-		} else {
-			fmt.Println()
-		}
-
-		globalAnalyticsForPosition := globalAnalyticsByPosition[position]
-
-		headers := []string{"μ", "1σ", "2σ", riotId}
-
-		columns := []*analytics.AnalyticsSnapshot{globalAnalyticsForPosition.Mean(), globalAnalyticsForPosition.ZScore(1), globalAnalyticsForPosition.ZScore(2), playerAnalyticsForPosition.Mean()}
-
-		fmt.Println(tui.ViewAnalytics(position.String(), headers, columns))
+func doPositions(positions []model.Position, xs map[string][]model.MatchMetrics) error {
+	for _, position := range positions {
+		doPosition(position, xs)
 	}
 
 	return nil
 }
 
-type playerToAnalyticsByChampion map[string]analytics.AnalyticsByChampion
+func doPosition(position model.Position, xs map[string][]model.MatchMetrics) {
+	headers := []string{}
 
-func doChampion(globalAnalyticsByChampion analytics.AnalyticsByChampion, metrics []model.MatchMetrics, riotId string) error {
-	playerAnalyticsByChampion := analytics.AnalyzeByChampion(metrics)
+	columns := []*analytics.AnalyticsSnapshot{}
 
-	first := true
+	for riotId, metrics := range xs {
+		analytics := analytics.AnalyzeForPosition(metrics, position)
 
-	for champion, playerAnalyticsForChampion := range playerAnalyticsByChampion {
-		if playerAnalyticsForChampion.Size < 2 {
+		if analytics == nil {
 			continue
 		}
 
-		if first {
-			first = false
-		} else {
-			fmt.Println()
-		}
+		headers = append(headers, riotId)
+		columns = append(columns, analytics.Mean())
+	}
 
-		globalAnalyticsForChampion := globalAnalyticsByChampion[champion]
+	tui.ViewAnalytics(position.String(), headers, columns)
+}
 
-		headers := []string{"μ", "1σ", "2σ", riotId}
-
-		columns := []*analytics.AnalyticsSnapshot{globalAnalyticsForChampion.Mean(), globalAnalyticsForChampion.ZScore(1), globalAnalyticsForChampion.ZScore(2), playerAnalyticsForChampion.Mean()}
-
-		fmt.Println(tui.ViewAnalytics(champion.String(), headers, columns))
+func doChampions(champions []model.Champion, xs map[string][]model.MatchMetrics) error {
+	for _, champion := range champions {
+		doChampion(champion, xs)
 	}
 
 	return nil
+}
+
+func doChampion(champion model.Champion, xs map[string][]model.MatchMetrics) {
+	headers := []string{}
+
+	columns := []*analytics.AnalyticsSnapshot{}
+
+	for riotId, metrics := range xs {
+		analytics := analytics.AnalyzeForChampion(metrics, champion)
+
+		if analytics == nil {
+			continue
+		}
+
+		headers = append(headers, riotId)
+		columns = append(columns, analytics.Mean())
+	}
+
+	tui.ViewAnalytics(champion.String(), headers, columns)
 }
