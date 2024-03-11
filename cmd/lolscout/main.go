@@ -41,9 +41,11 @@ func main() {
 
 func createCLIApp() *cli.App {
 	app := &cli.App{
+		Name: "lolscout",
 		Commands: []*cli.Command{
 			createLOLCommand(),
 			createPlayVSCommand(),
+			createAnalyzeCommand(),
 		},
 	}
 	return app
@@ -55,15 +57,8 @@ func createLOLCommand() *cli.Command {
 		Usage: "League of Legends",
 		Subcommands: []*cli.Command{
 			{
-				Name: "analyze",
-				Action: func(c *cli.Context) error {
-					riotId := c.Args().First()
-					return analyzePlayer(riotId)
-				},
-			},
-			{
 				Name:  "scan",
-				Usage: "scan recent matches",
+				Usage: "scan matches",
 				Subcommands: []*cli.Command{
 					createLOLScanCommand("day", "scan the last day of matches", 1),
 					createLOLScanCommand("week", "scan the last week of matches", 7),
@@ -215,6 +210,17 @@ func createPlayVSScanCommand(name, usage string, daysAgo int) *cli.Command {
 			}
 
 			return nil
+		},
+	}
+}
+
+func createAnalyzeCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "analyze",
+		Usage: "Analyze player metrics",
+		Action: func(c *cli.Context) error {
+			riotId := c.Args().First()
+			return analyzePlayer(riotId)
 		},
 	}
 }
