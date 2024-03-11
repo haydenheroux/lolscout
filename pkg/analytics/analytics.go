@@ -64,6 +64,65 @@ func (a Analytics) String() string {
 	return s
 }
 
+type AnalyticsSnapshot struct {
+	Assists              float64
+	CSPerMinute          float64
+	ControlWardsPlaced   float64
+	DamageDealtPerMinute float64
+	DamageDealtShare     float64
+	Deaths               float64
+	KillParticipation    float64
+	Kills                float64
+	TurretsTaken         float64
+	WardsKilled          float64
+	WardsPlaced          float64
+	WinRate              float64
+}
+
+func (a Analytics) Mean() *AnalyticsSnapshot {
+	return a.Percentile(0.5)
+}
+
+func (a Analytics) Percentile(percentile float64) *AnalyticsSnapshot {
+	percentileOf := func(n Norm) float64 {
+		return stats.NormPpf(percentile, n.Mean, n.StdDev)
+	}
+
+	return &AnalyticsSnapshot{
+		Assists:              percentileOf(a.Assists),
+		CSPerMinute:          percentileOf(a.CSPerMinute),
+		ControlWardsPlaced:   percentileOf(a.ControlWardsPlaced),
+		DamageDealtPerMinute: percentileOf(a.DamageDealtPerMinute),
+		DamageDealtShare:     percentileOf(a.DamageDealtShare),
+		Deaths:               percentileOf(a.Deaths),
+		KillParticipation:    percentileOf(a.KillParticipation),
+		Kills:                percentileOf(a.Kills),
+		TurretsTaken:         percentileOf(a.TurretsTaken),
+		WardsKilled:          percentileOf(a.WardsKilled),
+		WardsPlaced:          percentileOf(a.WardsPlaced),
+		WinRate:              a.WinRate,
+	}
+}
+
+func (v AnalyticsSnapshot) String() string {
+	var s string
+
+	s += fmt.Sprintln("Assists:", v.Assists)
+	s += fmt.Sprintln("CSPerMinute:", v.CSPerMinute)
+	s += fmt.Sprintln("ControlWardsPlaced:", v.ControlWardsPlaced)
+	s += fmt.Sprintln("DamageDealtPerMinute:", v.DamageDealtPerMinute)
+	s += fmt.Sprintln("DamageDealtShare:", v.DamageDealtShare)
+	s += fmt.Sprintln("Deaths:", v.Deaths)
+	s += fmt.Sprintln("KillParticipation:", v.KillParticipation)
+	s += fmt.Sprintln("Kills:", v.Kills)
+	s += fmt.Sprintln("TurretsTaken:", v.TurretsTaken)
+	s += fmt.Sprintln("WardsKilled:", v.WardsKilled)
+	s += fmt.Sprintln("WardsPlaced:", v.WardsPlaced)
+	s += fmt.Sprintf("WinRate: %.4f\n", v.WinRate)
+
+	return s
+}
+
 func Analyze(metrics []model.MatchMetrics) *Analytics {
 	assists := make([]int, len(metrics))
 	csPerMinute := make([]float64, len(metrics))

@@ -383,15 +383,12 @@ func analyzePlayer(riotId string) error {
 		}
 	}
 
-	// z := 0.6827
-	z := 0.5
-
-	thresholdsByPosition, err := dbc.GetPositionThresholds(z)
+	globalAnalyticsByPosition, err := dbc.GetAnalyticsByPosition()
 	if err != nil {
 		return err
 	}
 
-	thresholdsByChampion, err := dbc.GetChampionThresholds(z)
+	globalAnalyticsByChampion, err := dbc.GetAnalyticsByChampion()
 	if err != nil {
 		return err
 	}
@@ -401,33 +398,35 @@ func analyzePlayer(riotId string) error {
 	first := true
 
 	for position, analytics := range analyticsByPosition {
-		if analytics.Size > 2 {
-			if !first {
-				fmt.Println()
-			}
-
-			first = false
-
-			a := tui.Analytics{Analytics: analytics, Thresholds: thresholdsByPosition[position]}
-
-			fmt.Println(a.View(position.String()))
+		if analytics.Size < 2 {
+			continue
 		}
+
+		if !first {
+			fmt.Println()
+		}
+
+		first = false
+
+		fmt.Println(tui.ViewAnalytics(position.String(), []string{"μ", "1σ", riotId}, globalAnalyticsByPosition[position].Mean(), globalAnalyticsByPosition[position].Percentile(0.841), analytics.Mean()))
 	}
 
 	analyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
 
 	first = true
 
-	for champion, as := range analyticsByChampion {
-		if as.Size > 2 {
-			if !first {
-				fmt.Println()
-			}
-
-			first = false
-
-			fmt.Println(tui.ViewAnalytics([]string{champion.String(), "μ", riotApi.Join(player.GameName, player.TagLine)}, thresholdsByChampion[champion], []*analytics.Analytics{as}))
+	for champion, analytics := range analyticsByChampion {
+		if analytics.Size < 2 {
+			continue
 		}
+
+		if !first {
+			fmt.Println()
+		}
+
+		first = false
+
+		fmt.Println(tui.ViewAnalytics(champion.String(), []string{"μ", "1σ", riotId}, globalAnalyticsByChampion[champion].Mean(), globalAnalyticsByChampion[champion].Percentile(0.841), analytics.Mean()))
 	}
 
 	return nil
