@@ -88,6 +88,14 @@ func createPlayVSCommand() *cli.Command {
 			{
 				Name:  "analyze",
 				Usage: "analyze a team's players",
+				Flags: []cli.Flag{
+					&cli.StringSliceFlag{
+						Name: "position",
+					},
+					&cli.StringSliceFlag{
+						Name: "champion",
+					},
+				},
 				Action: func(c *cli.Context) error {
 					dbc, err := db.CreateClient(environment.DatabaseName)
 					if err != nil {
@@ -110,7 +118,23 @@ func createPlayVSCommand() *cli.Command {
 						riotIds[i] = riotApi.Join(player.GameName, player.TagLine)
 					}
 
-					analyzePlayers(riotIds)
+					positionStrs := c.StringSlice("position")
+
+					positions := make([]model.Position, len(positionStrs))
+
+					for i, positionStr := range positionStrs {
+						positions[i] = model.PositionFromString(positionStr)
+					}
+
+					championStrs := c.StringSlice("champion")
+
+					champions := make([]model.Champion, len(championStrs))
+
+					for i, championStr := range championStrs {
+						champions[i] = model.Champion(championStr)
+					}
+
+					analyzePlayers(riotIds, positions, champions)
 
 					return nil
 				},
@@ -218,8 +242,32 @@ func createAnalyzeCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "analyze",
 		Usage: "Analyze player metrics",
+		Flags: []cli.Flag{
+			&cli.StringSliceFlag{
+				Name: "position",
+			},
+			&cli.StringSliceFlag{
+				Name: "champion",
+			},
+		},
 		Action: func(c *cli.Context) error {
-			return analyzePlayers(c.Args().Slice())
+			positionStrs := c.StringSlice("position")
+
+			positions := make([]model.Position, len(positionStrs))
+
+			for i, positionStr := range positionStrs {
+				positions[i] = model.PositionFromString(positionStr)
+			}
+
+			championStrs := c.StringSlice("champion")
+
+			champions := make([]model.Champion, len(championStrs))
+
+			for i, championStr := range championStrs {
+				champions[i] = model.Champion(championStr)
+			}
+
+			return analyzePlayers(c.Args().Slice(), positions, champions)
 		},
 	}
 }
@@ -357,7 +405,7 @@ func initializePlayVSTeams() error {
 	return nil
 }
 
-func analyzePlayers(riotIds []string) error {
+func analyzePlayers(riotIds []string, positions []model.Position, champions []model.Champion) error {
 	dbc, err := db.CreateClient(environment.DatabaseName)
 	if err != nil {
 		return err
@@ -389,14 +437,9 @@ func analyzePlayers(riotIds []string) error {
 		xs[riotId] = s14Metrics
 	}
 
-	doPositions(model.Positions, xs)
+	doPositions(positions, xs)
 
-	allChampions, err := dbc.GetChampions()
-	if err != nil {
-		return err
-	}
-
-	doChampions(allChampions, xs)
+	doChampions(champions, xs)
 
 	return nil
 }

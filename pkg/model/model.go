@@ -1,8 +1,10 @@
 package model
 
 import (
-	"gorm.io/gorm"
+	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type Team struct {
@@ -121,6 +123,22 @@ const (
 )
 
 var Positions = []Position{PositionTop, PositionJungle, PositionMiddle, PositionBottom, PositionSupport}
+
+var positionStrings = map[string]Position{
+	"top":     PositionTop,
+	"jungle":  PositionJungle,
+	"middle":  PositionMiddle,
+	"bottom":  PositionBottom,
+	"support": PositionSupport,
+}
+
+func PositionFromString(s string) Position {
+	if pos, ok := positionStrings[strings.ToLower(s)]; ok {
+		return pos
+	}
+
+	return Unknown
+}
 
 func (p Position) String() string {
 	switch p {
