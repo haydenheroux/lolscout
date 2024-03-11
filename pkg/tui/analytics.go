@@ -26,7 +26,11 @@ func createTable() *table.Table {
 	return t
 }
 
-func ViewAnalytics(title string, columns []string, analytics ...*analytics.AnalyticsSnapshot) string {
+func ViewAnalytics(title string, columns []string, analytics []*analytics.AnalyticsSnapshot) string {
+	if len(columns) != len(analytics) {
+		panic("mismatch between number of columns and analytics")
+	}
+
 	t := createTable()
 
 	t.Headers(append([]string{title}, columns...)...)

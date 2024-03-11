@@ -388,12 +388,22 @@ func analyzePlayer(riotId string) error {
 		return err
 	}
 
+	doPosition(globalAnalyticsByPosition, s14PlayerMetrics, riotId)
+
 	globalAnalyticsByChampion, err := dbc.GetAnalyticsByChampion()
 	if err != nil {
 		return err
 	}
 
-	playerAnalyticsByPosition := analytics.AnalyzeByPosition(s14PlayerMetrics)
+	doChampion(globalAnalyticsByChampion, s14PlayerMetrics, riotId)
+
+	return nil
+}
+
+type playerToAnalyticsByPosition map[string]analytics.AnalyticsByPosition
+
+func doPosition(globalAnalyticsByPosition analytics.AnalyticsByPosition, metrics []model.MatchMetrics, riotId string) error {
+	playerAnalyticsByPosition := analytics.AnalyzeByPosition(metrics)
 
 	first := true
 
@@ -402,39 +412,49 @@ func analyzePlayer(riotId string) error {
 			continue
 		}
 
-		if !first {
+		if first {
+			first = false
+		} else {
 			fmt.Println()
 		}
 
-		first = false
+		globalAnalyticsForPosition := globalAnalyticsByPosition[position]
 
 		headers := []string{"μ", "1σ", "2σ", riotId}
 
-		globalAnalyticsForPosition := globalAnalyticsByPosition[position]
+		columns := []*analytics.AnalyticsSnapshot{globalAnalyticsForPosition.Mean(), globalAnalyticsForPosition.ZScore(1), globalAnalyticsForPosition.ZScore(2), playerAnalyticsForPosition.Mean()}
 
-		fmt.Println(tui.ViewAnalytics(position.String(), headers, globalAnalyticsForPosition.Mean(), globalAnalyticsForPosition.ZScore(1), globalAnalyticsForPosition.ZScore(2), playerAnalyticsForPosition.Mean()))
+		fmt.Println(tui.ViewAnalytics(position.String(), headers, columns))
 	}
 
-	playerAnalyticsByChampion := analytics.AnalyzeByChampion(s14PlayerMetrics)
+	return nil
+}
 
-	first = true
+type playerToAnalyticsByChampion map[string]analytics.AnalyticsByChampion
+
+func doChampion(globalAnalyticsByChampion analytics.AnalyticsByChampion, metrics []model.MatchMetrics, riotId string) error {
+	playerAnalyticsByChampion := analytics.AnalyzeByChampion(metrics)
+
+	first := true
 
 	for champion, playerAnalyticsForChampion := range playerAnalyticsByChampion {
 		if playerAnalyticsForChampion.Size < 2 {
 			continue
 		}
 
-		if !first {
+		if first {
+			first = false
+		} else {
 			fmt.Println()
 		}
 
-		first = false
+		globalAnalyticsForChampion := globalAnalyticsByChampion[champion]
 
 		headers := []string{"μ", "1σ", "2σ", riotId}
 
-		globalAnalyticsForChampion := globalAnalyticsByChampion[champion]
+		columns := []*analytics.AnalyticsSnapshot{globalAnalyticsForChampion.Mean(), globalAnalyticsForChampion.ZScore(1), globalAnalyticsForChampion.ZScore(2), playerAnalyticsForChampion.Mean()}
 
-		fmt.Println(tui.ViewAnalytics(champion.String(), headers, globalAnalyticsForChampion.Mean(), globalAnalyticsForChampion.ZScore(1), globalAnalyticsForChampion.ZScore(2), playerAnalyticsForChampion.Mean()))
+		fmt.Println(tui.ViewAnalytics(champion.String(), headers, columns))
 	}
 
 	return nil
