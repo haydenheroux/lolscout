@@ -56,17 +56,17 @@ func (m MatchMetrics) championView() string {
 	levelString := fmt.Sprintf("Lvl. %d", m.Metrics.Level)
 
 	minWidth := 10
-	width := max(len(levelString), len(m.Metrics.ChampionName), minWidth)
+	width := max(len(levelString), len(m.Metrics.Champion), minWidth)
 
-	championName := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
+	champion := lipgloss.NewStyle().Background(background).Bold(true).Width(width)
 
-	renderedChampionName := championName.Render(m.Metrics.ChampionName.String())
+	renderedChampion := champion.Render(m.Metrics.Champion.String())
 
 	level := lipgloss.NewStyle().Background(background).Width(width)
 
 	renderedLevel := level.Render(levelString)
 
-	return lipgloss.JoinVertical(lipgloss.Left, renderedChampionName, renderedLevel)
+	return lipgloss.JoinVertical(lipgloss.Left, renderedChampion, renderedLevel)
 }
 
 func (m MatchMetrics) kdaView() string {

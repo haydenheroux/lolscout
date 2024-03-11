@@ -52,7 +52,8 @@ func MatchMetrics(match *lol.Match, summoner *lol.Summoner) *model.MatchMetrics 
 			metrics.Assists = participant.Assists
 			metrics.CS = participant.TotalMinionsKilled + participant.NeutralMinionsKilled
 			metrics.CSPerMinute = float64(metrics.CS) / float64(durationMinutes)
-			metrics.ChampionName = model.Champion(metrics.ChampionName)
+
+			metrics.Champion = model.Champion(participant.ChampionName)
 			metrics.ControlWardsPlaced = participant.DetectorWardsPlaced
 			metrics.DamageDealt = participant.TotalDamageDealt
 			metrics.DamageDealtPerMinute = float64(metrics.DamageDealt) / float64(durationMinutes)

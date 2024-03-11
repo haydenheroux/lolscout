@@ -70,7 +70,7 @@ type MatchMetrics struct {
 	Assists              int
 	CS                   int
 	CSPerMinute          float64
-	ChampionName         Champion // TODO Rename to "Champion"
+	Champion             Champion
 	ControlWardsPlaced   int
 	DamageDealt          int
 	DamageDealtPerMinute float64

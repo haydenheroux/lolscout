@@ -91,7 +91,7 @@ func (dbc client) GetMetricsForPosition(position model.Position) ([]model.MatchM
 func (dbc client) GetMetricsForChampion(champion model.Champion) ([]model.MatchMetrics, error) {
 	var metrics []model.MatchMetrics
 
-	if err := dbc.DB.Model(&model.MatchMetrics{}).Where("champion_name = ?", champion).Find(&metrics).Error; err != nil {
+	if err := dbc.DB.Model(&model.MatchMetrics{}).Where("champion = ?", champion).Find(&metrics).Error; err != nil {
 		return nil, err
 	}
 
@@ -118,7 +118,7 @@ func (dbc client) GetPositionThresholds(percentile float64) (map[model.Position]
 func (dbc client) GetChampions() ([]model.Champion, error) {
 	var champions []model.Champion
 
-	if err := dbc.DB.Model(&model.MatchMetrics{}).Distinct().Pluck("champion_name", &champions).Error; err != nil {
+	if err := dbc.DB.Model(&model.MatchMetrics{}).Distinct().Pluck("champion", &champions).Error; err != nil {
 		return []model.Champion{}, err
 	}
 

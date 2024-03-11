@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	env "github.com/Netflix/go-env"
@@ -45,85 +44,6 @@ func createCLIApp() *cli.App {
 		Commands: []*cli.Command{
 			createLOLCommand(),
 			createPlayVSCommand(),
-			{
-				Name:  "thresholds",
-				Usage: "prints thresholds",
-				Action: func(c *cli.Context) error {
-					dbc, err := db.CreateClient(environment.DatabaseName)
-					if err != nil {
-						return err
-					}
-
-					var percentile float64
-
-					if c.Args().Len() == 0 {
-						percentile = 0.5
-					} else {
-						f, err := strconv.ParseFloat(c.Args().First(), 64)
-						if err != nil {
-							return err
-						}
-
-						percentile = f
-					}
-
-					thresholdsByPosition, err := dbc.GetPositionThresholds(percentile)
-					if err != nil {
-						return err
-					}
-
-					first := true
-
-					for position, thresholds := range thresholdsByPosition {
-						if !first {
-							fmt.Println()
-						}
-
-						first = false
-
-						fmt.Println(position)
-						fmt.Print(thresholds)
-					}
-
-					thresholdsByChampion, err := dbc.GetChampionThresholds(percentile)
-
-					first = true
-
-					for champion, thresholds := range thresholdsByChampion {
-						if !first {
-							fmt.Println()
-						}
-
-						first = false
-
-						fmt.Println(champion)
-						fmt.Print(thresholds)
-					}
-
-					return nil
-				},
-			},
-			{
-				Name:  "champions",
-				Usage: "prints played champions",
-				Action: func(c *cli.Context) error {
-					dbc, err := db.CreateClient(environment.DatabaseName)
-					if err != nil {
-						return err
-					}
-
-					champions, err := dbc.GetChampions()
-					if err != nil {
-						return err
-					}
-
-					for _, champion := range champions {
-						fmt.Println(champion)
-					}
-
-					return nil
-				},
-			},
 		},
 	}
 	return app
@@ -506,7 +426,7 @@ func analyzePlayer(riotId string) error {
 
 			first = false
 
-			fmt.Println(tui.ViewAnalytics([]string{champion.String(), "Population", "Sample"}, thresholdsByChampion[champion], []*analytics.Analytics{as}))
+			fmt.Println(tui.ViewAnalytics([]string{champion.String(), "μ", riotApi.Join(player.GameName, player.TagLine)}, thresholdsByChampion[champion], []*analytics.Analytics{as}))
 		}
 	}
 

@@ -155,12 +155,12 @@ func byChampion(metrics []model.MatchMetrics) championMetrics {
 	championMetrics := make(championMetrics)
 
 	for _, metric := range metrics {
-		championName := metric.ChampionName
+		champion := metric.Champion
 
-		if _, ok := championMetrics[championName]; !ok {
-			championMetrics[championName] = []model.MatchMetrics{metric}
+		if _, ok := championMetrics[champion]; !ok {
+			championMetrics[champion] = []model.MatchMetrics{metric}
 		} else {
-			championMetrics[championName] = append(championMetrics[championName], metric)
+			championMetrics[champion] = append(championMetrics[champion], metric)
 		}
 	}
 
